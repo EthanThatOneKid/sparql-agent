@@ -10,14 +10,15 @@
     "zod": "npm:zod@^4.1.13",
     "sparqljs": "npm:sparqljs@^3.7.3",
     "deno_tree_sitter": "https://deno.land/x/deno_tree_sitter@1.0.1.2/main/main.js",
-    "common_tree_sitter_languages/": "https://github.com/EthanThatOneKid/common_tree_sitter_languages/blob/8eeb010ee5edb3dea6ac41f98432815e9e70f211/"
+    "common_tree_sitter_languages/": "https://github.com/EthanThatOneKid/common_tree_sitter_languages/raw/8eeb010ee5edb3dea6ac41f98432815e9e70f211/"
   },
   "tasks": {
     "start": "deno -A --env main.ts",
     "fmt": "deno fmt",
     "lint": "deno lint",
-    "check": "deno check",
+    "check": "deno check --allow-import",
     "test": "deno test --allow-read --allow-import",
+    "bench": "deno bench --allow-read --allow-import",
     "precommit": {
       "description": "Run all pre-commit tasks",
       "dependencies": [

@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { generateSparql } from "#/sparql/generate.ts";
+import { generateSparql } from "#/sparql/generate-sparql.ts";
 import { SparqljsSparqlValidator } from "#/sparql/validator/sparqljs.ts";
 
 const validator = new SparqljsSparqlValidator();
