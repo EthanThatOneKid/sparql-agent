@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { DataFactory, Store } from "n3";
+import { Store } from "n3";
+import DataFactory from "@rdfjs/data-model";
 import type * as RDF from "@rdfjs/types";
 import { ComunicaSparqlEngine } from "./comunica.ts";
 
@@ -13,6 +14,7 @@ function createPopulatedN3Store(): Store {
       namedNode("http://example.org/alice"),
       namedNode("http://xmlns.com/foaf/0.1/name"),
       literal("Alice"),
+      DataFactory.defaultGraph(),
     ),
   );
 
@@ -21,6 +23,7 @@ function createPopulatedN3Store(): Store {
       namedNode("http://example.org/alice"),
       namedNode("http://xmlns.com/foaf/0.1/age"),
       literal("30", namedNode("http://www.w3.org/2001/XMLSchema#integer")),
+      DataFactory.defaultGraph(),
     ),
   );
 
@@ -29,6 +32,7 @@ function createPopulatedN3Store(): Store {
       namedNode("http://example.org/bob"),
       namedNode("http://xmlns.com/foaf/0.1/name"),
       literal("Bob"),
+      DataFactory.defaultGraph(),
     ),
   );
 
