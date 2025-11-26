@@ -5,13 +5,13 @@ Everything you need to build a grounded world model.
 ## Sub-agents
 
 - `generateSparql`: Generate a SPARQL query for a given prompt.
-  - Tools: `searchEntities`, `executeSparql`, `generateIri`, `validateSparql`
+  - Tools: `searchFacts`, `executeSparql`, `generateIri`, `validateSparql`
   - Context: Current time, user, list of built-in functions, allowed prefixes,
     etc.
 
 ## Tools
 
-- `searchEntities`: Top K full-text and vector search results and confidence
+- `searchFacts`: Top K full-text and vector search results and confidence
   scores. TODO: Disambiguation tool.
 - `executeSparql`: Execute a SPARQL query and return the result.
 - `generateIri`: Generate an IRI for a given entity.
@@ -30,10 +30,10 @@ Trace of execution:
 
 - `generateSparql("Met up with Nancy at Crêpes de Paris Inc cafe.")`
   - `generateResearch("Nancy")`
-    - `searchEntities("Nancy")`: Not found.
+    - `searchFacts("Nancy")`: Not found.
   - `generateIri("Nancy")`: Generated IRI for "Nancy".
   - `generateResearch("Crêpes de Paris Inc")`
-    - `searchEntities("Crêpes de Paris Inc")`: Not found.
+    - `searchFacts("Crêpes de Paris Inc")`: Not found.
   - `generateIri("Crêpes de Paris Inc")`: Generated IRI for "Crêpes de Paris
     Inc".
   - `validateSparql("INSERT DATA { ex:nancy a ex:Person }")`: Valid.

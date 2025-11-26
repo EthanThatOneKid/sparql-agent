@@ -1,12 +1,15 @@
 import { tool } from "ai";
 import { z } from "zod/v4";
-import { quadSchema, termSchema } from "#/rdfjs/data-model-schema.ts";
+import {
+  quadSchema,
+  termSchema,
+} from "#/rdfjs/data-model/data-model-schema.ts";
 
 /**
  * SparqlEngine executes a SPARQL query and returns the structured result.
  */
 export interface SparqlEngine {
-  executeSparql: (query: string) => Promise<ExecuteSparqlResult>;
+  executeSparql: (query: string) => Promise<ExecuteSparqlOutput>;
 }
 
 /**
@@ -36,9 +39,9 @@ export const sparqlBindingsSchema = z.record(
 );
 
 /**
- * ExecuteSparqlResult represents a SPARQL query result.
+ * ExecuteSparqlOutput represents a SPARQL query output.
  */
-export type ExecuteSparqlResult = z.infer<typeof executeSparqlOutputSchema>;
+export type ExecuteSparqlOutput = z.infer<typeof executeSparqlOutputSchema>;
 
 export const executeSparqlOutputSchema = z.union([
   z.string(),

@@ -5,7 +5,7 @@ import type {
   QueryAlgebraContext,
 } from "@comunica/types";
 import type { QueryEngine } from "@comunica/query-sparql";
-import type { ExecuteSparqlResult, SparqlEngine } from "./tool.ts";
+import type { ExecuteSparqlOutput, SparqlEngine } from "./tool.ts";
 
 export class ComunicaSparqlEngine implements SparqlEngine {
   public constructor(
@@ -13,7 +13,7 @@ export class ComunicaSparqlEngine implements SparqlEngine {
     private readonly context?: QueryAlgebraContext,
   ) {}
 
-  public async executeSparql(query: string): Promise<ExecuteSparqlResult> {
+  public async executeSparql(query: string): Promise<ExecuteSparqlOutput> {
     const result = await this.queryEngine.query(query, this.context);
     switch (result.resultType) {
       case "bindings": {
