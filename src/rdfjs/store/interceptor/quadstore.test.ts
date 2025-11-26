@@ -5,10 +5,7 @@ import DataFactory from "@rdfjs/data-model";
 import type { Bindings, QueryStringContext } from "@comunica/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Quadstore } from "quadstore";
-import type {
-  MatchEventDetail,
-  StreamEventDetail,
-} from "#/rdfjs/store/types.ts";
+import type { MatchEventDetail, StreamEventDetail } from "./interceptor.ts";
 import { StoreInterceptor } from "./interceptor.ts";
 
 async function createQuadstoreInstance() {

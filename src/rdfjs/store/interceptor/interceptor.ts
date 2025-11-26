@@ -2,6 +2,36 @@ import type { Quad, Store, Stream, Term } from "@rdfjs/types";
 import { EventEmitter } from "node:events";
 
 /**
+ * QuadPattern is a pattern for matching quads in a store.
+ * All fields are optional and can be null to match any value.
+ */
+export interface QuadPattern {
+  subject?: Term | null;
+  predicate?: Term | null;
+  object?: Term | null;
+  graph?: Term | null;
+}
+
+/**
+ * StreamEventDetail is the detail for import and remove operations.
+ */
+export interface StreamEventDetail {
+  stream: Stream<Quad>;
+}
+
+/**
+ * GraphEventDetail is the detail for deleteGraph operations.
+ */
+export interface GraphEventDetail {
+  graph: Quad["graph"] | string;
+}
+
+/**
+ * MatchEventDetail is the detail for match and removematches operations.
+ */
+export interface MatchEventDetail extends QuadPattern {}
+
+/**
  * StoreInterceptor provides observability for all Store operations
  * by emitting events for read and write operations.
  *
@@ -37,7 +67,10 @@ export class StoreInterceptor extends EventEmitter implements Store {
     object?: Term | null,
     graph?: Term | null,
   ): Stream<Quad> {
-    this.emit("match", { subject, predicate, object, graph });
+    this.emit(
+      "match",
+      { subject, predicate, object, graph } satisfies MatchEventDetail,
+    );
     return this.store.match(subject, predicate, object, graph);
   }
 
@@ -46,7 +79,7 @@ export class StoreInterceptor extends EventEmitter implements Store {
    * Emits an "import" event.
    */
   import(stream: Stream<Quad>): EventEmitter {
-    this.emit("import", { stream });
+    this.emit("import", { stream } satisfies StreamEventDetail);
     return this.store.import(stream);
   }
 
@@ -55,7 +88,7 @@ export class StoreInterceptor extends EventEmitter implements Store {
    * Emits a "remove" event.
    */
   remove(stream: Stream<Quad>): EventEmitter {
-    this.emit("remove", { stream });
+    this.emit("remove", { stream } satisfies StreamEventDetail);
     return this.store.remove(stream);
   }
 
@@ -69,7 +102,10 @@ export class StoreInterceptor extends EventEmitter implements Store {
     object?: Term | null,
     graph?: Term | null,
   ): EventEmitter {
-    this.emit("removematches", { subject, predicate, object, graph });
+    this.emit(
+      "removematches",
+      { subject, predicate, object, graph } satisfies MatchEventDetail,
+    );
     return this.store.removeMatches(subject, predicate, object, graph);
   }
 
@@ -78,7 +114,7 @@ export class StoreInterceptor extends EventEmitter implements Store {
    * Emits a "deletegraph" event.
    */
   deleteGraph(graph: Quad["graph"] | string): EventEmitter {
-    this.emit("deletegraph", { graph });
+    this.emit("deletegraph", { graph } satisfies GraphEventDetail);
     return this.store.deleteGraph(graph);
   }
 }

@@ -1,16 +1,25 @@
-import type { Quad, Store, Stream, Term } from "@rdfjs/types";
 import { EventEmitter } from "node:events";
-import type { GraphEventDetail, QuadPattern } from "./types.ts";
+import type { Quad, Store, Stream, Term } from "@rdfjs/types";
 
 /**
  * Fake Store implementation for testing
  */
 export class FakeStore implements Store {
-  public matchCalls: QuadPattern[] = [];
+  public matchCalls: Array<{
+    subject?: Term | null;
+    predicate?: Term | null;
+    object?: Term | null;
+    graph?: Term | null;
+  }> = [];
   public importCalls: Stream<Quad>[] = [];
   public removeCalls: Stream<Quad>[] = [];
-  public removeMatchesCalls: QuadPattern[] = [];
-  public deleteGraphCalls: Array<GraphEventDetail["graph"]> = [];
+  public removeMatchesCalls: Array<{
+    subject?: Term | null;
+    predicate?: Term | null;
+    object?: Term | null;
+    graph?: Term | null;
+  }> = [];
+  public deleteGraphCalls: Array<Quad["graph"] | string> = [];
 
   match(
     subject?: Term | null,
@@ -49,7 +58,7 @@ export class FakeStore implements Store {
     return new EventEmitter();
   }
 
-  deleteGraph(graph: GraphEventDetail["graph"]): EventEmitter {
+  deleteGraph(graph: Quad["graph"] | string): EventEmitter {
     this.deleteGraphCalls.push(graph);
     return new EventEmitter();
   }

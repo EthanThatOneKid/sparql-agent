@@ -8,7 +8,7 @@ import {
   createOramaTripleStore,
   OramaFactSearchEngine,
 } from "#/tools/search-facts/engines/orama/orama.ts";
-import type { StreamEventDetail } from "#/rdfjs/store/types.ts";
+import type { StreamEventDetail } from "./interceptor.ts";
 import { StoreInterceptor } from "./interceptor.ts";
 
 function fromQuad(quad: Quad) {

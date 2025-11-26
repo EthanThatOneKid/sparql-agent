@@ -6,7 +6,7 @@ import type {
   GraphEventDetail,
   MatchEventDetail,
   StreamEventDetail,
-} from "#/rdfjs/store/types.ts";
+} from "./interceptor.ts";
 import { StoreInterceptor } from "./interceptor.ts";
 
 Deno.test("StoreInterceptor - match dispatches match event", () => {
