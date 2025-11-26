@@ -1,12 +1,12 @@
 import { Parser } from "sparqljs";
-import type { SparqlValidator } from "./sparql-validator.ts";
+import type { SparqlValidator } from "./tool.ts";
 
 export class SparqljsSparqlValidator implements SparqlValidator {
   public constructor(
     private readonly parser: InstanceType<typeof Parser> = new Parser(),
   ) {}
 
-  public validate(query: string): boolean {
+  public validateSparql(query: string): boolean {
     try {
       this.parser.parse(query);
       return true;
