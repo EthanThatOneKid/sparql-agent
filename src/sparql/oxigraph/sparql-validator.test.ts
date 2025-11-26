@@ -1,5 +1,5 @@
 import { assert } from "@std/assert";
-import { OxigraphSparqlValidator } from "../oxigraph/sparql-validator.ts";
+import { OxigraphSparqlValidator } from "./sparql-validator.ts";
 
 Deno.test("OxigraphSparqlValidator validates valid SPARQL queries", () => {
   const validator = new OxigraphSparqlValidator();
