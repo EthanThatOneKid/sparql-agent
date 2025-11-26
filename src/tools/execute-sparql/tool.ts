@@ -2,10 +2,17 @@ import { tool } from "ai";
 import { z } from "zod/v4";
 import { quadSchema, termSchema } from "#/rdfjs/data-model-schema.ts";
 
+/**
+ * SparqlEngine executes a SPARQL query and returns the structured result.
+ */
 export interface SparqlEngine {
   executeSparql: (query: string) => Promise<ExecuteSparqlResult>;
 }
 
+/**
+ * createExecuteSparqlTool creates a tool that executes a SPARQL query using
+ * a given SPARQL engine.
+ */
 export function createExecuteSparqlTool(sparqlEngine: SparqlEngine) {
   return tool({
     name: "executeSparql",
