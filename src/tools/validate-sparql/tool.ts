@@ -16,7 +16,7 @@ export interface SparqlValidator {
 export function createValidateSparqlTool(sparqlValidator: SparqlValidator) {
   return tool({
     name: "validateSparql",
-    description: "Validate syntax of a SPARQL query",
+    description: "Validates syntax of a SPARQL query",
     inputSchema: validateSparqlInputSchema,
     outputSchema: validateSparqlOutputSchema,
     execute: ({ query }) => {
