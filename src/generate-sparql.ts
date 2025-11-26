@@ -1,5 +1,9 @@
 import type { LanguageModel } from "ai";
 import { generateText } from "ai";
+import type { IriGenerator } from "#/tools/generate-iri/tool.ts";
+import { createGenerateIriTool } from "#/tools/generate-iri/tool.ts";
+import type { SparqlEngine } from "#/tools/execute-sparql/tool.ts";
+import { createExecuteSparqlTool } from "#/tools/execute-sparql/tool.ts";
 import type { SparqlValidator } from "#/tools/validate-sparql/tool.ts";
 import { createValidateSparqlTool } from "#/tools/validate-sparql/tool.ts";
 
@@ -10,10 +14,12 @@ export interface GenerateSparqlOptions {
 }
 
 export interface GenerateSparqlTools {
+  iriGenerator: IriGenerator;
+  sparqlEngine: SparqlEngine;
   sparqlValidator: SparqlValidator;
 }
 
-// TODO: Generate structured output based on SPARQL.js types.
+// TODO: Create tool that generates structured output based on SPARQL.js types and avoids `validateSparql` tool.
 // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/ac331df94f856a6c353de171a01bddc9dcbb463b/types/sparqljs/index.d.ts
 //
 
@@ -30,9 +36,9 @@ export async function generateSparql(options: GenerateSparqlOptions) {
     Always use the \`validateSparql\` tool to validate the query.
     Return the query only if it is valid, otherwise try again.`,
     tools: {
+      generateIri: createGenerateIriTool(options.tools.iriGenerator),
+      executeSparql: createExecuteSparqlTool(options.tools.sparqlEngine),
       validateSparql: createValidateSparqlTool(options.tools.sparqlValidator),
-      //   executeSparql: executeSparqlTool(options.executeSparql),
-      // searchSubjects: searchSubjectsTool(options.searchSubjects),
     },
   });
 }

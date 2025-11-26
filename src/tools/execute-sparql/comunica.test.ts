@@ -118,7 +118,7 @@ Deno.test("ComunicaSparqlEngine executes UPDATE queries", async () => {
     }
   `);
 
-  assertEquals(result, "void");
+  assertEquals(result, "");
   const inserted = store.getQuads(
     namedNode("http://example.org/carol"),
     namedNode("http://xmlns.com/foaf/0.1/name"),
