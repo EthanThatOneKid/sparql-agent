@@ -1,6 +1,6 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { MemoryLevel } from "memory-level";
-import type * as RDF from "@rdfjs/types";
+import type { Term, Variable } from "@rdfjs/types";
 import DataFactory from "@rdfjs/data-model";
 import type { Bindings, QueryStringContext } from "@comunica/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
@@ -23,10 +23,10 @@ async function createComunicaTestEnv() {
   const store = new Quadstore({ backend, dataFactory: DataFactory });
   await store.open();
 
-  const eventTarget = new StoreInterceptor(store);
+  const interceptor = new StoreInterceptor(store);
   const engine = new QueryEngine<QueryStringContext>();
-  const context: QueryStringContext = { sources: [eventTarget] };
-  return { store, eventTarget, engine, context };
+  const context: QueryStringContext = { sources: [interceptor] };
+  return { store, interceptor, engine, context };
 }
 
 async function executeTestQuery(
@@ -39,7 +39,7 @@ async function executeTestQuery(
   const bindingsArray = await stream.toArray() as Bindings[];
   for (const binding of bindingsArray) {
     const entry: Record<string, string> = {};
-    binding.forEach((term: RDF.Term, variable: RDF.Variable | string) => {
+    binding.forEach((term: Term, variable: Variable | string) => {
       const varName = typeof variable === "object" && variable !== null &&
           "value" in variable
         ? String((variable as { value: string }).value)
@@ -57,8 +57,8 @@ async function executeTestQuery(
 Deno.test("StoreInterceptor - can be created with a Quadstore", () => {
   const backend = new MemoryLevel();
   const store = new Quadstore({ backend, dataFactory: DataFactory });
-  const eventTarget = new StoreInterceptor(store);
-  assertExists(eventTarget);
+  const interceptor = new StoreInterceptor(store);
+  assertExists(interceptor);
 });
 
 Deno.test(
@@ -66,11 +66,11 @@ Deno.test(
   async () => {
     const { store } = await createQuadstoreInstance();
     try {
-      const eventTarget = new StoreInterceptor(store);
+      const interceptor = new StoreInterceptor(store);
       const events: MatchEventDetail[] = [];
-      eventTarget.on("match", (detail) => events.push(detail));
+      interceptor.on("match", (detail) => events.push(detail));
 
-      const stream = eventTarget.match();
+      const stream = interceptor.match();
       assertExists(stream);
       assertEquals(events.length, 1);
     } finally {
@@ -92,17 +92,17 @@ Deno.test(
         ),
       );
 
-      const eventTarget = new StoreInterceptor(store);
+      const interceptor = new StoreInterceptor(store);
       const removeEvents: StreamEventDetail[] = [];
       const removeMatchesEvents: MatchEventDetail[] = [];
 
-      eventTarget.on("remove", (detail) => removeEvents.push(detail));
-      eventTarget.on(
+      interceptor.on("remove", (detail) => removeEvents.push(detail));
+      interceptor.on(
         "removematches",
         (detail) => removeMatchesEvents.push(detail),
       );
 
-      const result = eventTarget.removeMatches(
+      const result = interceptor.removeMatches(
         DataFactory.namedNode("http://example.org/alice"),
         null,
         null,
@@ -125,11 +125,11 @@ Deno.test(
 Deno.test(
   "StoreInterceptor + Comunica - INSERT DATA dispatches import event",
   async () => {
-    const { store, eventTarget, engine, context } =
+    const { store, interceptor, engine, context } =
       await createComunicaTestEnv();
     try {
       const importEvents: StreamEventDetail[] = [];
-      eventTarget.on("import", (detail) => importEvents.push(detail));
+      interceptor.on("import", (detail) => importEvents.push(detail));
 
       const insertQuery = `
         INSERT DATA {
@@ -163,7 +163,7 @@ Deno.test(
 Deno.test(
   "StoreInterceptor + Comunica - DELETE DATA dispatches removematches event",
   async () => {
-    const { store, eventTarget, engine, context } =
+    const { store, interceptor, engine, context } =
       await createComunicaTestEnv();
     try {
       // Seed data
@@ -178,11 +178,11 @@ Deno.test(
 
       const removeMatchesEvents: MatchEventDetail[] = [];
       const removeStreamEvents: StreamEventDetail[] = [];
-      eventTarget.on(
+      interceptor.on(
         "removematches",
         (detail) => removeMatchesEvents.push(detail),
       );
-      eventTarget.on("remove", (detail) => removeStreamEvents.push(detail));
+      interceptor.on("remove", (detail) => removeStreamEvents.push(detail));
 
       await engine.queryVoid(
         `
@@ -216,7 +216,7 @@ Deno.test(
 Deno.test(
   "StoreInterceptor + Comunica - DELETE/INSERT updates dispatch both events",
   async () => {
-    const { store, eventTarget, engine, context } =
+    const { store, interceptor, engine, context } =
       await createComunicaTestEnv();
     try {
       await engine.queryVoid(
@@ -231,12 +231,12 @@ Deno.test(
       const importEvents: StreamEventDetail[] = [];
       const removeMatchesEvents: MatchEventDetail[] = [];
       const removeStreamEvents: StreamEventDetail[] = [];
-      eventTarget.on("import", (detail) => importEvents.push(detail));
-      eventTarget.on(
+      interceptor.on("import", (detail) => importEvents.push(detail));
+      interceptor.on(
         "removematches",
         (detail) => removeMatchesEvents.push(detail),
       );
-      eventTarget.on("remove", (detail) => removeStreamEvents.push(detail));
+      interceptor.on("remove", (detail) => removeStreamEvents.push(detail));
 
       await engine.queryVoid(
         `

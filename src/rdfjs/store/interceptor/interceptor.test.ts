@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import type * as RDF from "@rdfjs/types";
+import type { Term } from "@rdfjs/types";
 import DataFactory from "@rdfjs/data-model";
 import { createFakeStream, FakeStore } from "#/rdfjs/store/fake-store.ts";
 import type {
@@ -11,24 +11,24 @@ import { StoreInterceptor } from "./interceptor.ts";
 
 Deno.test("StoreInterceptor - match dispatches match event", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events: Array<
     {
-      subject?: RDF.Term | null;
-      predicate?: RDF.Term | null;
-      object?: RDF.Term | null;
-      graph?: RDF.Term | null;
+      subject?: Term | null;
+      predicate?: Term | null;
+      object?: Term | null;
+      graph?: Term | null;
     }
   > = [];
-  eventTarget.on("match", (detail) => events.push(detail));
+  interceptor.on("match", (detail) => events.push(detail));
 
   const subject = DataFactory.namedNode("http://example.org/subject");
   const predicate = DataFactory.namedNode("http://example.org/predicate");
   const object = DataFactory.literal("object");
   const graph = DataFactory.namedNode("http://example.org/graph");
 
-  eventTarget.match(subject, predicate, object, graph);
+  interceptor.match(subject, predicate, object, graph);
 
   assertEquals(events.length, 1);
   assertExists(events[0]);
@@ -47,12 +47,12 @@ Deno.test("StoreInterceptor - match dispatches match event", () => {
 
 Deno.test("StoreInterceptor - match with null parameters", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events: MatchEventDetail[] = [];
-  eventTarget.on("match", (detail) => events.push(detail));
+  interceptor.on("match", (detail) => events.push(detail));
 
-  eventTarget.match(null, null, null, null);
+  interceptor.match(null, null, null, null);
 
   assertEquals(events.length, 1);
   assertEquals(events[0].subject, null);
@@ -63,13 +63,13 @@ Deno.test("StoreInterceptor - match with null parameters", () => {
 
 Deno.test("StoreInterceptor - import dispatches import event", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events: StreamEventDetail[] = [];
-  eventTarget.on("import", (detail) => events.push(detail));
+  interceptor.on("import", (detail) => events.push(detail));
 
   const stream = createFakeStream();
-  const result = eventTarget.import(stream);
+  const result = interceptor.import(stream);
 
   assertEquals(events.length, 1);
   assertExists(events[0]);
@@ -85,13 +85,13 @@ Deno.test("StoreInterceptor - import dispatches import event", () => {
 
 Deno.test("StoreInterceptor - remove dispatches remove event", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events: StreamEventDetail[] = [];
-  eventTarget.on("remove", (detail) => events.push(detail));
+  interceptor.on("remove", (detail) => events.push(detail));
 
   const stream = createFakeStream();
-  const result = eventTarget.remove(stream);
+  const result = interceptor.remove(stream);
 
   assertEquals(events.length, 1);
   assertExists(events[0]);
@@ -107,17 +107,17 @@ Deno.test("StoreInterceptor - remove dispatches remove event", () => {
 
 Deno.test("StoreInterceptor - removeMatches dispatches removematches event", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events: MatchEventDetail[] = [];
-  eventTarget.on("removematches", (detail) => events.push(detail));
+  interceptor.on("removematches", (detail) => events.push(detail));
 
   const subject = DataFactory.namedNode("http://example.org/subject");
   const predicate = DataFactory.namedNode("http://example.org/predicate");
   const object = DataFactory.literal("object");
   const graph = DataFactory.namedNode("http://example.org/graph");
 
-  const result = eventTarget.removeMatches(subject, predicate, object, graph);
+  const result = interceptor.removeMatches(subject, predicate, object, graph);
 
   assertEquals(events.length, 1);
   assertExists(events[0]);
@@ -139,13 +139,13 @@ Deno.test("StoreInterceptor - removeMatches dispatches removematches event", () 
 
 Deno.test("StoreInterceptor - deleteGraph dispatches deletegraph event", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events: GraphEventDetail[] = [];
-  eventTarget.on("deletegraph", (detail) => events.push(detail));
+  interceptor.on("deletegraph", (detail) => events.push(detail));
 
   const graph = DataFactory.namedNode("http://example.org/graph");
-  const result = eventTarget.deleteGraph(graph);
+  const result = interceptor.deleteGraph(graph);
 
   assertEquals(events.length, 1);
   assertExists(events[0]);
@@ -161,13 +161,13 @@ Deno.test("StoreInterceptor - deleteGraph dispatches deletegraph event", () => {
 
 Deno.test("StoreInterceptor - deleteGraph with string graph", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events: GraphEventDetail[] = [];
-  eventTarget.on("deletegraph", (detail) => events.push(detail));
+  interceptor.on("deletegraph", (detail) => events.push(detail));
 
   const graphString = "http://example.org/graph";
-  const result = eventTarget.deleteGraph(graphString);
+  const result = interceptor.deleteGraph(graphString);
 
   assertEquals(events.length, 1);
   assertEquals(events[0].graph, graphString);
@@ -182,15 +182,15 @@ Deno.test("StoreInterceptor - deleteGraph with string graph", () => {
 
 Deno.test("StoreInterceptor - multiple event listeners receive events", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const events1: MatchEventDetail[] = [];
   const events2: MatchEventDetail[] = [];
 
-  eventTarget.on("match", (detail) => events1.push(detail));
-  eventTarget.on("match", (detail) => events2.push(detail));
+  interceptor.on("match", (detail) => events1.push(detail));
+  interceptor.on("match", (detail) => events2.push(detail));
 
-  eventTarget.match();
+  interceptor.match();
 
   assertEquals(events1.length, 1);
   assertEquals(events2.length, 1);
@@ -200,43 +200,43 @@ Deno.test("StoreInterceptor - multiple event listeners receive events", () => {
 
 Deno.test("StoreInterceptor - match returns store's stream", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
-  const stream = eventTarget.match();
+  const stream = interceptor.match();
   assertExists(stream);
   assertEquals(typeof stream.read, "function");
 });
 
 Deno.test("StoreInterceptor - all operations can be observed", () => {
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const allEvents: Array<{ type: string; detail: unknown }> = [];
 
-  eventTarget.on("match", (detail) => {
+  interceptor.on("match", (detail) => {
     allEvents.push({ type: "match", detail });
   });
-  eventTarget.on("import", (detail) => {
+  interceptor.on("import", (detail) => {
     allEvents.push({ type: "import", detail });
   });
-  eventTarget.on("remove", (detail) => {
+  interceptor.on("remove", (detail) => {
     allEvents.push({ type: "remove", detail });
   });
-  eventTarget.on("removematches", (detail) => {
+  interceptor.on("removematches", (detail) => {
     allEvents.push({ type: "removematches", detail });
   });
-  eventTarget.on("deletegraph", (detail) => {
+  interceptor.on("deletegraph", (detail) => {
     allEvents.push({ type: "deletegraph", detail });
   });
 
   // Execute all operations
-  eventTarget.match();
+  interceptor.match();
   const stream1 = createFakeStream();
-  eventTarget.import(stream1);
+  interceptor.import(stream1);
   const stream2 = createFakeStream();
-  eventTarget.remove(stream2);
-  eventTarget.removeMatches();
-  eventTarget.deleteGraph("http://example.org/graph");
+  interceptor.remove(stream2);
+  interceptor.removeMatches();
+  interceptor.deleteGraph("http://example.org/graph");
 
   // Verify all events were dispatched
   assertEquals(allEvents.length, 5);
@@ -253,19 +253,19 @@ Deno.test("StoreInterceptor - no duplicate events when store calls methods inter
   // get duplicate events. The underlying store calls its own methods directly,
   // not the wrapped methods, so only the top-level operation emits an event.
   const fakeStore = new FakeStore();
-  const eventTarget = new StoreInterceptor(fakeStore);
+  const interceptor = new StoreInterceptor(fakeStore);
 
   const removeEvents: StreamEventDetail[] = [];
   const removeMatchesEvents: MatchEventDetail[] = [];
   const matchEvents: MatchEventDetail[] = [];
 
-  eventTarget.on("remove", (detail) => removeEvents.push(detail));
-  eventTarget.on("removematches", (detail) => removeMatchesEvents.push(detail));
-  eventTarget.on("match", (detail) => matchEvents.push(detail));
+  interceptor.on("remove", (detail) => removeEvents.push(detail));
+  interceptor.on("removematches", (detail) => removeMatchesEvents.push(detail));
+  interceptor.on("match", (detail) => matchEvents.push(detail));
 
   // Call removeMatches, which internally calls match() and remove()
   // in the FakeStore implementation
-  eventTarget.removeMatches();
+  interceptor.removeMatches();
 
   // We should only get ONE removematches event, not additional remove/match events
   // from the internal calls, because the store calls its own methods, not the wrapped ones

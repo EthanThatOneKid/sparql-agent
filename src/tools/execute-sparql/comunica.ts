@@ -1,4 +1,4 @@
-import type * as RDF from "@rdfjs/types";
+import type { Term, Variable } from "@rdfjs/types";
 import type {
   Bindings,
   BindingsStream,
@@ -45,8 +45,8 @@ export class ComunicaSparqlEngine implements SparqlEngine {
 
   private async collectBindings(
     stream: BindingsStream,
-  ): Promise<Array<Map<string, RDF.Term>>> {
-    const rows: Array<Map<string, RDF.Term>> = [];
+  ): Promise<Array<Map<string, Term>>> {
+    const rows: Array<Map<string, Term>> = [];
     for await (const binding of stream) {
       rows.push(this.bindingToMap(binding));
     }
@@ -54,8 +54,8 @@ export class ComunicaSparqlEngine implements SparqlEngine {
     return rows;
   }
 
-  private bindingToMap(binding: Bindings): Map<string, RDF.Term> {
-    const map = new Map<string, RDF.Term>();
+  private bindingToMap(binding: Bindings): Map<string, Term> {
+    const map = new Map<string, Term>();
     for (const [variable, term] of binding) {
       map.set(this.variableToName(variable), term);
     }
@@ -63,7 +63,7 @@ export class ComunicaSparqlEngine implements SparqlEngine {
     return map;
   }
 
-  private variableToName(variable: RDF.Variable | string): string {
+  private variableToName(variable: Variable | string): string {
     if (typeof variable === "string") {
       return variable.startsWith("?") ? variable.slice(1) : variable;
     }

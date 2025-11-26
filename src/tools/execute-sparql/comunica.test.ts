@@ -2,7 +2,7 @@ import { assert, assertEquals } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Store } from "n3";
 import DataFactory from "@rdfjs/data-model";
-import type * as RDF from "@rdfjs/types";
+import type { Quad } from "@rdfjs/types";
 import { ComunicaSparqlEngine } from "./comunica.ts";
 
 const { namedNode, literal, quad } = DataFactory;
@@ -97,7 +97,7 @@ Deno.test("ComunicaSparqlEngine executes CONSTRUCT queries", async () => {
   `);
 
   assert(Array.isArray(result));
-  const quads = result as RDF.Quad[];
+  const quads = result as Quad[];
   assertEquals(quads.length, 2);
   const subjects = quads.map((quad) => quad.subject.value).sort();
   assertEquals(subjects, [
