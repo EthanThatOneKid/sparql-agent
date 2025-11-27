@@ -1,4 +1,4 @@
-import type { IriGenerator } from "./tool.ts";
+import type { IriGenerator } from "#/tools/generate-iri/iri-generator.ts";
 
 /**
  * UuidIriGenerator generates a unique IRI for an entity using a UUID.

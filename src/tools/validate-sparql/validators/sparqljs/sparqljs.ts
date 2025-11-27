@@ -1,5 +1,5 @@
 import { Parser } from "sparqljs";
-import type { SparqlValidator } from "./tool.ts";
+import type { SparqlValidator } from "#/tools/validate-sparql/sparql-validator.ts";
 
 export class SparqljsSparqlValidator implements SparqlValidator {
   public constructor(

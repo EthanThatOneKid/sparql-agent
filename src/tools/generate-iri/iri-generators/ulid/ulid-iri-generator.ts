@@ -1,5 +1,5 @@
 import { ulid } from "@std/ulid/ulid";
-import type { IriGenerator } from "./tool.ts";
+import type { IriGenerator } from "#/tools/generate-iri/iri-generator.ts";
 
 /**
  * UlidIriGenerator generates a unique IRI for an entity with

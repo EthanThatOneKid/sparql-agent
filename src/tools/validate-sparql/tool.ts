@@ -1,12 +1,9 @@
 import { tool } from "ai";
-import { z } from "zod/v4";
-
-/**
- * SparqlValidator validates a SPARQL query.
- */
-export interface SparqlValidator {
-  validateSparql: (query: string) => boolean;
-}
+import type { SparqlValidator } from "./sparql-validator.ts";
+import {
+  validateSparqlInputSchema,
+  validateSparqlOutputSchema,
+} from "./sparql-validator.ts";
 
 /**
  * createValidateSparqlTool creates a tool that validates a SPARQL query
@@ -24,11 +21,3 @@ export function createValidateSparqlTool(sparqlValidator: SparqlValidator) {
     },
   });
 }
-
-export const validateSparqlInputSchema = z.object({
-  query: z.string(),
-});
-
-export const validateSparqlOutputSchema = z.object({
-  success: z.boolean(),
-});

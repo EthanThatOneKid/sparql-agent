@@ -1,12 +1,9 @@
 import { tool } from "ai";
-import { z } from "zod/v4";
-
-/**
- * IriGenerator generates a unique IRI for an entity.
- */
-export interface IriGenerator {
-  generateIri: () => string;
-}
+import type { IriGenerator } from "./iri-generator.ts";
+import {
+  generateIriInputSchema,
+  generateIriOutputSchema,
+} from "./iri-generator.ts";
 
 /**
  * createGenerateIriTool creates a tool that generates a unique IRI for an entity.
@@ -23,11 +20,3 @@ export function createGenerateIriTool(iriGenerator: IriGenerator) {
     },
   });
 }
-
-export const generateIriInputSchema = z.object({
-  name: z.string(),
-});
-
-export const generateIriOutputSchema = z.object({
-  iri: z.string(),
-});

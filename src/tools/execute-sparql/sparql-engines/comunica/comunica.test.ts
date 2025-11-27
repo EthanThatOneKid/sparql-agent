@@ -1,37 +1,37 @@
 import { assert, assertEquals } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { Store } from "n3";
-import DataFactory from "@rdfjs/data-model";
+import { DataFactory, Store } from "n3";
 import type { Quad } from "@rdfjs/types";
 import { ComunicaSparqlEngine } from "./comunica.ts";
-
-const { namedNode, literal, quad } = DataFactory;
 
 function createPopulatedN3Store(): Store {
   const store = new Store();
   store.addQuad(
-    quad(
-      namedNode("http://example.org/alice"),
-      namedNode("http://xmlns.com/foaf/0.1/name"),
-      literal("Alice"),
+    DataFactory.quad(
+      DataFactory.namedNode("http://example.org/alice"),
+      DataFactory.namedNode("http://xmlns.com/foaf/0.1/name"),
+      DataFactory.literal("Alice"),
       DataFactory.defaultGraph(),
     ),
   );
 
   store.addQuad(
-    quad(
-      namedNode("http://example.org/alice"),
-      namedNode("http://xmlns.com/foaf/0.1/age"),
-      literal("30", namedNode("http://www.w3.org/2001/XMLSchema#integer")),
+    DataFactory.quad(
+      DataFactory.namedNode("http://example.org/alice"),
+      DataFactory.namedNode("http://xmlns.com/foaf/0.1/age"),
+      DataFactory.literal(
+        "30",
+        DataFactory.namedNode("http://www.w3.org/2001/XMLSchema#integer"),
+      ),
       DataFactory.defaultGraph(),
     ),
   );
 
   store.addQuad(
-    quad(
-      namedNode("http://example.org/bob"),
-      namedNode("http://xmlns.com/foaf/0.1/name"),
-      literal("Bob"),
+    DataFactory.quad(
+      DataFactory.namedNode("http://example.org/bob"),
+      DataFactory.namedNode("http://xmlns.com/foaf/0.1/name"),
+      DataFactory.literal("Bob"),
       DataFactory.defaultGraph(),
     ),
   );
@@ -124,9 +124,9 @@ Deno.test("ComunicaSparqlEngine executes UPDATE queries", async () => {
 
   assertEquals(result, "");
   const inserted = store.getQuads(
-    namedNode("http://example.org/carol"),
-    namedNode("http://xmlns.com/foaf/0.1/name"),
-    literal("Carol"),
+    DataFactory.namedNode("http://example.org/carol"),
+    DataFactory.namedNode("http://xmlns.com/foaf/0.1/name"),
+    DataFactory.literal("Carol"),
     null,
   );
   assertEquals(inserted.length, 1);

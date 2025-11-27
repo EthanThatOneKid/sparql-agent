@@ -1,5 +1,5 @@
 import { assert } from "@std/assert";
-import { SparqljsSparqlValidator } from "./sparqljs.ts";
+import { SparqljsSparqlValidator } from "../../validators/sparqljs/sparqljs.ts";
 
 Deno.test("SparqljsSparqlValidator validates valid SPARQL queries", () => {
   const sparqlValidator = new SparqljsSparqlValidator();
