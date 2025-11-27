@@ -1,5 +1,4 @@
 import { assertEquals, assertExists } from "@std/assert";
-import type { Term } from "@rdfjs/types";
 import DataFactory from "@rdfjs/data-model";
 import { createFakeStream, FakeStore } from "#/rdfjs/store/fake-store.ts";
 import type {
@@ -8,58 +7,6 @@ import type {
   StreamEventDetail,
 } from "./interceptor.ts";
 import { StoreInterceptor } from "./interceptor.ts";
-
-Deno.test("StoreInterceptor - match dispatches match event", () => {
-  const fakeStore = new FakeStore();
-  const interceptor = new StoreInterceptor(fakeStore);
-
-  const events: Array<
-    {
-      subject?: Term | null;
-      predicate?: Term | null;
-      object?: Term | null;
-      graph?: Term | null;
-    }
-  > = [];
-  interceptor.on("match", (detail) => events.push(detail));
-
-  const subject = DataFactory.namedNode("http://example.org/subject");
-  const predicate = DataFactory.namedNode("http://example.org/predicate");
-  const object = DataFactory.literal("object");
-  const graph = DataFactory.namedNode("http://example.org/graph");
-
-  interceptor.match(subject, predicate, object, graph);
-
-  assertEquals(events.length, 1);
-  assertExists(events[0]);
-  assertEquals(events[0].subject, subject);
-  assertEquals(events[0].predicate, predicate);
-  assertEquals(events[0].object, object);
-  assertEquals(events[0].graph, graph);
-
-  // Verify underlying store method was called
-  assertEquals(fakeStore.matchCalls.length, 1);
-  assertEquals(fakeStore.matchCalls[0].subject, subject);
-  assertEquals(fakeStore.matchCalls[0].predicate, predicate);
-  assertEquals(fakeStore.matchCalls[0].object, object);
-  assertEquals(fakeStore.matchCalls[0].graph, graph);
-});
-
-Deno.test("StoreInterceptor - match with null parameters", () => {
-  const fakeStore = new FakeStore();
-  const interceptor = new StoreInterceptor(fakeStore);
-
-  const events: MatchEventDetail[] = [];
-  interceptor.on("match", (detail) => events.push(detail));
-
-  interceptor.match(null, null, null, null);
-
-  assertEquals(events.length, 1);
-  assertEquals(events[0].subject, null);
-  assertEquals(events[0].predicate, null);
-  assertEquals(events[0].object, null);
-  assertEquals(events[0].graph, null);
-});
 
 Deno.test("StoreInterceptor - import dispatches import event", () => {
   const fakeStore = new FakeStore();

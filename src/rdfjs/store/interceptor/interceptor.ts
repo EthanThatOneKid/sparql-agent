@@ -1,5 +1,6 @@
 import type { Quad, Store, Stream, Term } from "@rdfjs/types";
 import { EventEmitter } from "node:events";
+import { Readable } from "node:stream";
 
 /**
  * QuadPattern is a pattern for matching quads in a store.
@@ -32,6 +33,49 @@ export interface GraphEventDetail {
 export interface MatchEventDetail extends QuadPattern {}
 
 /**
+ * QuadEventDetail is the detail for insert operations (single quad).
+ */
+export interface QuadEventDetail {
+  quad: Quad;
+}
+
+/**
+ * Event map that maps event names to their detail types.
+ * This provides type safety for event listeners.
+ */
+export interface StoreInterceptorEventMap {
+  match: MatchEventDetail;
+  import: StreamEventDetail;
+  remove: StreamEventDetail;
+  removematches: MatchEventDetail;
+  deletegraph: GraphEventDetail;
+  insert: QuadEventDetail;
+}
+
+/**
+ * Type-safe event emitter interface for StoreInterceptor.
+ * Extends EventEmitter with typed methods based on the event map.
+ */
+export interface TypedStoreInterceptorEmitter {
+  on<K extends keyof StoreInterceptorEventMap>(
+    event: K,
+    listener: (detail: StoreInterceptorEventMap[K]) => void,
+  ): this;
+  once<K extends keyof StoreInterceptorEventMap>(
+    event: K,
+    listener: (detail: StoreInterceptorEventMap[K]) => void,
+  ): this;
+  off<K extends keyof StoreInterceptorEventMap>(
+    event: K,
+    listener: (detail: StoreInterceptorEventMap[K]) => void,
+  ): this;
+  emit<K extends keyof StoreInterceptorEventMap>(
+    event: K,
+    detail: StoreInterceptorEventMap[K],
+  ): boolean;
+}
+
+/**
  * StoreInterceptor provides observability for all Store operations
  * by emitting events for read and write operations.
  *
@@ -52,7 +96,8 @@ export interface MatchEventDetail extends QuadPattern {}
  * interceptor.removeMatches(subject, predicate, object, graph);
  * ```
  */
-export class StoreInterceptor extends EventEmitter implements Store {
+export class StoreInterceptor extends EventEmitter
+  implements Store, TypedStoreInterceptorEmitter {
   public constructor(private readonly store: Store) {
     super();
   }
@@ -116,5 +161,29 @@ export class StoreInterceptor extends EventEmitter implements Store {
   deleteGraph(graph: Quad["graph"] | string): EventEmitter {
     this.emit("deletegraph", { graph } satisfies GraphEventDetail);
     return this.store.deleteGraph(graph);
+  }
+
+  /**
+   * Insert a single quad into the store.
+   * Emits an "insert" event.
+   * Note: This method is not part of the standard RDF.js Store interface,
+   * but many stores (like Quadstore) implement it.
+   */
+  async put(quad: Quad): Promise<void> {
+    this.emit("insert", { quad } satisfies QuadEventDetail);
+    const storeWithPut = this.store as Store & {
+      put?: (quad: Quad) => Promise<void>;
+    };
+    if (storeWithPut.put) {
+      await storeWithPut.put(quad);
+    } else {
+      // Fallback: create a stream with a single quad and use import
+      const stream = Readable.from([quad], { objectMode: true });
+      return new Promise<void>((resolve, reject) => {
+        const result = this.store.import(stream as unknown as Stream<Quad>);
+        result.on("end", () => resolve());
+        result.on("error", (error) => reject(error));
+      });
+    }
   }
 }

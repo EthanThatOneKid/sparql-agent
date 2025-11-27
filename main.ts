@@ -50,7 +50,7 @@ if (import.meta.main) {
 
   console.dir(result, { depth: null });
 
-  // Clean up
+  // Clean up.
   cleanupSync();
   await quadstore.close();
 }

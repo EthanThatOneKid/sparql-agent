@@ -1,405 +1,447 @@
-import { assertEquals } from "@std/assert";
-import { MemoryLevel } from "memory-level";
-import type { Quad, Stream } from "@rdfjs/types";
+import { assert, assertEquals } from "@std/assert";
+import { Store } from "n3";
 import DataFactory from "@rdfjs/data-model";
-import { insert } from "@orama/orama";
 import { Readable } from "node:stream";
-import { Quadstore } from "quadstore";
+import type { Quad, Stream } from "@rdfjs/types";
 import {
   createOramaTripleStore,
   OramaFactSearchEngine,
 } from "#/tools/search-facts/engines/orama/orama.ts";
 import { StoreInterceptor } from "./interceptor.ts";
-import { fromQuad, syncStoreInterceptorWithOrama } from "./orama.ts";
+import { syncStoreInterceptorWithOrama } from "./orama.ts";
+
+const { namedNode, literal, quad } = DataFactory;
 
 /**
- * Creates a stream from an async iterable of quads.
- * Uses Node.js Readable stream for proper compatibility with Quadstore.
+ * Creates a stream from an array of quads.
  */
-async function createQuadStream(
-  quads: AsyncIterable<Quad>,
-): Promise<Stream<Quad>> {
-  const quadArray: Quad[] = [];
-  for await (const quad of quads) {
-    quadArray.push(quad);
+function createQuadStream(quads: Quad[]): Stream<Quad> {
+  const stream = Readable.from(quads, { objectMode: true }) as Stream<Quad>;
+  return stream;
+}
+
+Deno.test("syncStoreInterceptorWithOrama - import syncs quads to Orama", async () => {
+  const store = new Store();
+  const interceptor = new StoreInterceptor(store);
+  const orama = createOramaTripleStore();
+  const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
+
+  try {
+    const testQuad = quad(
+      namedNode("http://example.org/alice"),
+      namedNode("http://xmlns.com/foaf/0.1/name"),
+      literal("Alice"),
+      DataFactory.defaultGraph(),
+    );
+
+    const stream = createQuadStream([testQuad]);
+    await new Promise<void>((resolve, reject) => {
+      const result = interceptor.import(stream);
+      result.on("end", () => resolve());
+      result.on("error", reject);
+    });
+
+    // Verify quad is in Orama by searching
+    const engine = new OramaFactSearchEngine(orama);
+    const results = await engine.searchFacts("Alice", 10);
+
+    assert(results.length > 0);
+    const aliceResult = results.find(
+      (r) => r.object === "Alice" && r.subject === "http://example.org/alice",
+    );
+    assert(aliceResult !== undefined);
+    assertEquals(aliceResult.predicate, "http://xmlns.com/foaf/0.1/name");
+  } finally {
+    cleanup();
   }
+});
 
-  let index = 0;
-  const readable = new Readable({
-    objectMode: true,
-    read() {
-      if (index < quadArray.length) {
-        this.push(quadArray[index++]);
-      } else {
-        this.push(null);
-      }
-    },
-  });
+Deno.test("syncStoreInterceptorWithOrama - insert syncs single quad to Orama", async () => {
+  const store = new Store();
+  const interceptor = new StoreInterceptor(store);
+  const orama = createOramaTripleStore();
+  const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
 
-  return readable as unknown as Stream<Quad>;
-}
-
-async function createQuadstoreInstance() {
-  const backend = new MemoryLevel();
-  const store = new Quadstore({ backend, dataFactory: DataFactory });
-  await store.open();
-  return { store };
-}
-
-function createOramaSyncInstance() {
-  const oramaStore = createOramaTripleStore();
-  const searchEngine = new OramaFactSearchEngine(oramaStore);
-  return { oramaStore, searchEngine };
-}
-
-Deno.test(
-  "Orama sync - creating entries when triples are added to store",
-  async () => {
-    const { store } = await createQuadstoreInstance();
-    const { oramaStore, searchEngine } = createOramaSyncInstance();
-    const interceptor = new StoreInterceptor(store);
-
-    // Set up synchronization between the interceptor and Orama store.
-    const cleanupSync = syncStoreInterceptorWithOrama(interceptor, oramaStore);
-
-    // Add a triple to the store using import (triggers sync to Orama)
-    const quad = DataFactory.quad(
-      DataFactory.namedNode("http://example.org/alice"),
-      DataFactory.namedNode("http://schema.org/name"),
-      DataFactory.literal("Alice"),
+  try {
+    const testQuad = quad(
+      namedNode("http://example.org/bob"),
+      namedNode("http://xmlns.com/foaf/0.1/name"),
+      literal("Bob"),
       DataFactory.defaultGraph(),
     );
 
-    // Create a stream generator function
-    async function* quadGenerator() {
-      yield quad;
-    }
+    await interceptor.put(testQuad);
+
+    // Verify quad is in Orama by searching
+    const engine = new OramaFactSearchEngine(orama);
+    const results = await engine.searchFacts("Bob", 10);
+
+    assert(results.length > 0);
+    const bobResult = results.find(
+      (r) => r.object === "Bob" && r.subject === "http://example.org/bob",
+    );
+    assert(bobResult !== undefined);
+    assertEquals(bobResult.predicate, "http://xmlns.com/foaf/0.1/name");
+  } finally {
+    cleanup();
+  }
+});
+
+Deno.test("syncStoreInterceptorWithOrama - remove removes quads from Orama", async () => {
+  const store = new Store();
+  const interceptor = new StoreInterceptor(store);
+  const orama = createOramaTripleStore();
+  const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
+
+  try {
+    // First, add a quad
+    const testQuad = quad(
+      namedNode("http://example.org/charlie"),
+      namedNode("http://xmlns.com/foaf/0.1/name"),
+      literal("Charlie"),
+      DataFactory.defaultGraph(),
+    );
+
+    await interceptor.put(testQuad);
+
+    // Verify it's in Orama
+    const engine = new OramaFactSearchEngine(orama);
+    let results = await engine.searchFacts("Charlie", 10);
+    assert(results.length > 0);
+
+    // Now remove it
+    const removeStream = createQuadStream([testQuad]);
+    await new Promise<void>((resolve, reject) => {
+      const result = interceptor.remove(removeStream);
+      result.on("end", () => resolve());
+      result.on("error", reject);
+    });
+
+    // Give async handlers time to complete
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Verify it's removed from Orama
+    results = await engine.searchFacts("Charlie", 10);
+    const charlieResult = results.find((r) => r.object === "Charlie");
+    assert(charlieResult === undefined, "Charlie should be removed from Orama");
+  } finally {
+    cleanup();
+  }
+});
+
+Deno.test(
+  "syncStoreInterceptorWithOrama - removematches removes matching quads from Orama",
+  async () => {
+    const store = new Store();
+    const interceptor = new StoreInterceptor(store);
+    const orama = createOramaTripleStore();
+    const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
 
     try {
-      // Create a stream with the quad and import it (this triggers the sync)
-      const stream = await createQuadStream(quadGenerator());
-      const importResult = interceptor.import(stream);
-
-      // Wait for stream to finish (Readable stream)
-      await new Promise<void>((resolve) => {
-        if (stream.on) {
-          stream.on("end", () => resolve());
-          stream.on("error", () => resolve());
-        } else {
-          // If no event emitter, wait a bit for consumption
-          setTimeout(() => resolve(), 50);
-        }
-      });
-
-      // Wait for import operation to complete
-      await new Promise<void>((resolve) => {
-        importResult.on("end", () => resolve());
-        importResult.on("error", () => resolve());
-      });
-
-      // Wait for async sync operations to complete (inserts into Orama)
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Verify the triple was added to the store
-      // Quadstore's match returns an async iterable
-      const matchStream = store.match(
-        DataFactory.namedNode("http://example.org/alice"),
-        undefined,
-        undefined,
-        undefined,
+      // Add multiple quads
+      const quad1 = quad(
+        namedNode("http://example.org/dave"),
+        namedNode("http://xmlns.com/foaf/0.1/name"),
+        literal("Dave"),
+        DataFactory.defaultGraph(),
       );
-      const quads: Quad[] = [];
-      if (Symbol.asyncIterator in matchStream) {
-        for await (const q of matchStream as unknown as AsyncIterable<Quad>) {
-          quads.push(q);
-        }
-      } else {
-        const stream = matchStream as { read?: () => Quad | null };
-        if (stream.read) {
-          let q: Quad | null;
-          while ((q = stream.read()) !== null) {
-            quads.push(q);
-          }
-        }
-      }
-      assertEquals(quads.length, 1);
+      const quad2 = quad(
+        namedNode("http://example.org/dave"),
+        namedNode("http://xmlns.com/foaf/0.1/age"),
+        literal("35"),
+        DataFactory.defaultGraph(),
+      );
+      const quad3 = quad(
+        namedNode("http://example.org/eve"),
+        namedNode("http://xmlns.com/foaf/0.1/name"),
+        literal("Eve"),
+        DataFactory.defaultGraph(),
+      );
 
-      // Verify the triple can be found in Orama
-      const results = await searchEngine.searchFacts("Alice", 10);
-      assertEquals(results.length, 1);
-      assertEquals(results[0].subject, "http://example.org/alice");
-      assertEquals(results[0].predicate, "http://schema.org/name");
-      assertEquals(results[0].object, "Alice");
+      await interceptor.put(quad1);
+      await interceptor.put(quad2);
+      await interceptor.put(quad3);
+
+      // Verify all are in Orama
+      const engine = new OramaFactSearchEngine(orama);
+      let results = await engine.searchFacts("Dave", 10);
+      assert(results.length >= 2); // Should find both name and age
+
+      // Remove all quads with subject dave
+      await new Promise<void>((resolve, reject) => {
+        const result = interceptor.removeMatches(
+          namedNode("http://example.org/dave"),
+          null,
+          null,
+          null,
+        );
+        result.on("end", () => resolve());
+        result.on("error", reject);
+      });
+
+      // Give async handlers time to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Verify Dave quads are removed but Eve remains
+      results = await engine.searchFacts("Dave", 10);
+      const daveResults = results.filter(
+        (r) => r.subject === "http://example.org/dave",
+      );
+      assertEquals(daveResults.length, 0, "Dave quads should be removed");
+
+      results = await engine.searchFacts("Eve", 10);
+      const eveResult = results.find((r) => r.object === "Eve");
+      assert(eveResult !== undefined, "Eve should still be in Orama");
     } finally {
-      cleanupSync();
-      await store.close();
+      cleanup();
     }
   },
 );
 
 Deno.test(
-  "Orama sync - reading entries from Orama after store operations",
+  "syncStoreInterceptorWithOrama - deletegraph removes all quads in graph from Orama",
   async () => {
-    const { store } = await createQuadstoreInstance();
-    const { oramaStore, searchEngine } = createOramaSyncInstance();
+    const store = new Store();
     const interceptor = new StoreInterceptor(store);
-
-    // Manually add some triples to both store and Orama to test reading
-    const quad1 = DataFactory.quad(
-      DataFactory.namedNode("http://example.org/alice"),
-      DataFactory.namedNode("http://schema.org/name"),
-      DataFactory.literal("Alice"),
-      DataFactory.defaultGraph(),
-    );
-    const quad2 = DataFactory.quad(
-      DataFactory.namedNode("http://example.org/bob"),
-      DataFactory.namedNode("http://schema.org/name"),
-      DataFactory.literal("Bob"),
-      DataFactory.defaultGraph(),
-    );
+    const orama = createOramaTripleStore();
+    const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
 
     try {
-      // Add to store
-      await store.put(quad1);
-      await store.put(quad2);
+      const graph1 = namedNode("http://example.org/graph1");
+      const graph2 = namedNode("http://example.org/graph2");
 
-      // Add to Orama
-      await insert(oramaStore, fromQuad(quad1));
-      await insert(oramaStore, fromQuad(quad2));
+      // Add quads to different graphs
+      const quad1 = quad(
+        namedNode("http://example.org/frank"),
+        namedNode("http://xmlns.com/foaf/0.1/name"),
+        literal("Frank"),
+        graph1,
+      );
+      const quad2 = quad(
+        namedNode("http://example.org/grace"),
+        namedNode("http://xmlns.com/foaf/0.1/name"),
+        literal("Grace"),
+        graph1,
+      );
+      const quad3 = quad(
+        namedNode("http://example.org/henry"),
+        namedNode("http://xmlns.com/foaf/0.1/name"),
+        literal("Henry"),
+        graph2,
+      );
 
-      // Verify we can read from Orama
-      const aliceResults = await searchEngine.searchFacts("Alice", 10);
-      assertEquals(aliceResults.length, 1);
-      assertEquals(aliceResults[0].object, "Alice");
+      await interceptor.put(quad1);
+      await interceptor.put(quad2);
+      await interceptor.put(quad3);
 
-      const bobResults = await searchEngine.searchFacts("Bob", 10);
-      assertEquals(bobResults.length, 1);
-      assertEquals(bobResults[0].object, "Bob");
+      // Verify all are in Orama
+      const engine = new OramaFactSearchEngine(orama);
+      let results = await engine.searchFacts("Frank", 10);
+      assert(results.length > 0);
+      results = await engine.searchFacts("Grace", 10);
+      assert(results.length > 0);
+      results = await engine.searchFacts("Henry", 10);
+      assert(results.length > 0);
 
-      // Verify we can read from store
-      // Quadstore's match returns an async iterable
-      const storeStream = interceptor.match();
-      const storeQuads: Quad[] = [];
-      if (Symbol.asyncIterator in storeStream) {
-        for await (const q of storeStream as unknown as AsyncIterable<Quad>) {
-          storeQuads.push(q);
-        }
-      } else {
-        const stream = storeStream as { read?: () => Quad | null };
-        if (stream.read) {
-          let q: Quad | null;
-          while ((q = stream.read()) !== null) {
-            storeQuads.push(q);
-          }
-        }
-      }
-      assertEquals(storeQuads.length, 2);
+      // Delete graph1
+      await new Promise<void>((resolve, reject) => {
+        const result = interceptor.deleteGraph(graph1);
+        result.on("end", () => resolve());
+        result.on("error", reject);
+      });
+
+      // Give async handlers time to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Verify graph1 quads are removed but graph2 remains
+      results = await engine.searchFacts("Frank", 10);
+      const frankResult = results.find((r) => r.object === "Frank");
+      assert(frankResult === undefined, "Frank should be removed");
+
+      results = await engine.searchFacts("Grace", 10);
+      const graceResult = results.find((r) => r.object === "Grace");
+      assert(graceResult === undefined, "Grace should be removed");
+
+      results = await engine.searchFacts("Henry", 10);
+      const henryResult = results.find((r) => r.object === "Henry");
+      assert(henryResult !== undefined, "Henry should still be in Orama");
     } finally {
-      await store.close();
+      cleanup();
     }
   },
 );
 
 Deno.test(
-  "Orama sync - deleting entries when triples are removed from store",
+  "syncStoreInterceptorWithOrama - multiple operations work together correctly",
   async () => {
-    const { store } = await createQuadstoreInstance();
-    const { oramaStore, searchEngine } = createOramaSyncInstance();
+    const store = new Store();
     const interceptor = new StoreInterceptor(store);
-
-    // Set up synchronization between the interceptor and Orama store.
-    const cleanupSync = syncStoreInterceptorWithOrama(interceptor, oramaStore);
-
-    // Add initial data to both store and Orama using import (triggers sync)
-    const quad = DataFactory.quad(
-      DataFactory.namedNode("http://example.org/book"),
-      DataFactory.namedNode("http://schema.org/name"),
-      DataFactory.literal("Book Title"),
-      DataFactory.defaultGraph(),
-    );
-
-    // Create a stream generator function
-    async function* quadGenerator() {
-      yield quad;
-    }
+    const orama = createOramaTripleStore();
+    const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
 
     try {
-      // Import the quad (this triggers sync to Orama)
-      const stream = await createQuadStream(quadGenerator());
-      const importResult = interceptor.import(stream);
-
-      // Wait for stream to finish emitting
-      await new Promise<void>((resolve) => {
-        stream.on("end", () => resolve());
-        stream.on("error", () => resolve());
-      });
-
-      // Wait for import operation to complete
-      await new Promise<void>((resolve) => {
-        importResult.on("end", () => resolve());
-        importResult.on("error", () => resolve());
-      });
-
-      // Wait for sync to complete
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Verify it exists in both
-      const beforeResults = await searchEngine.searchFacts("Book", 10);
-      assertEquals(beforeResults.length, 1);
-
-      // Remove the triple from the store (this triggers sync removal from Orama)
-      interceptor.removeMatches(
-        DataFactory.namedNode("http://example.org/book"),
-        undefined,
-        undefined,
-        undefined,
+      // Add quads via import
+      const quad1 = quad(
+        namedNode("http://example.org/iris"),
+        namedNode("http://xmlns.com/foaf/0.1/name"),
+        literal("Iris"),
+        DataFactory.defaultGraph(),
+      );
+      const quad2 = quad(
+        namedNode("http://example.org/iris"),
+        namedNode("http://xmlns.com/foaf/0.1/age"),
+        literal("28"),
+        DataFactory.defaultGraph(),
       );
 
-      // Wait for removal sync to complete
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      const importStream = createQuadStream([quad1, quad2]);
+      await new Promise<void>((resolve, reject) => {
+        const result = interceptor.import(importStream);
+        result.on("end", () => resolve());
+        result.on("error", reject);
+      });
 
-      // Verify it was removed from the store
-      // Quadstore's match returns an async iterable
-      const storeStream = store.match(
-        DataFactory.namedNode("http://example.org/book"),
-        undefined,
-        undefined,
-        undefined,
+      // Add another quad via insert
+      const quad3 = quad(
+        namedNode("http://example.org/jack"),
+        namedNode("http://xmlns.com/foaf/0.1/name"),
+        literal("Jack"),
+        DataFactory.defaultGraph(),
       );
-      const remainingQuads: Quad[] = [];
-      if (Symbol.asyncIterator in storeStream) {
-        for await (const q of storeStream as unknown as AsyncIterable<Quad>) {
-          remainingQuads.push(q);
-        }
-      } else {
-        const stream = storeStream as { read?: () => Quad | null };
-        if (stream.read) {
-          let q: Quad | null;
-          while ((q = stream.read()) !== null) {
-            remainingQuads.push(q);
-          }
-        }
-      }
-      assertEquals(remainingQuads.length, 0);
+      await interceptor.put(quad3);
 
-      // Verify it was removed from Orama (sync should have handled this)
-      const afterResults = await searchEngine.searchFacts("Book", 10);
-      assertEquals(afterResults.length, 0);
+      // Verify all are in Orama
+      const engine = new OramaFactSearchEngine(orama);
+      let results = await engine.searchFacts("Iris", 10);
+      assert(results.length >= 1);
+      results = await engine.searchFacts("Jack", 10);
+      assert(results.length >= 1);
+
+      // Remove one quad
+      await new Promise<void>((resolve, reject) => {
+        const removeStream = createQuadStream([quad1]);
+        const result = interceptor.remove(removeStream);
+        result.on("end", () => resolve());
+        result.on("error", reject);
+      });
+
+      // Give async handlers time to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Verify only name quad is removed, age quad remains
+      results = await engine.searchFacts("Iris", 10);
+      const irisNameResult = results.find(
+        (r) => r.predicate === "http://xmlns.com/foaf/0.1/name",
+      );
+      assert(irisNameResult === undefined, "Iris name should be removed");
+
+      const irisAgeResult = results.find(
+        (r) => r.predicate === "http://xmlns.com/foaf/0.1/age",
+      );
+      assert(irisAgeResult !== undefined, "Iris age should still be in Orama");
     } finally {
-      cleanupSync();
-      await store.close();
+      cleanup();
     }
   },
 );
 
 Deno.test(
-  "Orama sync - full cycle: create, read, delete",
+  "syncStoreInterceptorWithOrama - cleanup function removes event listeners",
   async () => {
-    const { store } = await createQuadstoreInstance();
-    const { oramaStore, searchEngine } = createOramaSyncInstance();
+    const store = new Store();
     const interceptor = new StoreInterceptor(store);
+    const orama = createOramaTripleStore();
+    const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
 
-    // Set up synchronization between the interceptor and Orama store.
-    const cleanupSync = syncStoreInterceptorWithOrama(interceptor, oramaStore);
-
-    const quad = DataFactory.quad(
-      DataFactory.namedNode("http://example.org/product"),
-      DataFactory.namedNode("http://schema.org/name"),
-      DataFactory.literal("Product Name"),
+    // Add a quad before cleanup
+    const testQuad = quad(
+      namedNode("http://example.org/kate"),
+      namedNode("http://xmlns.com/foaf/0.1/name"),
+      literal("Kate"),
       DataFactory.defaultGraph(),
     );
+    await interceptor.put(testQuad);
 
-    // Create a stream generator function
-    async function* quadGenerator() {
-      yield quad;
-    }
+    // Verify it's in Orama
+    const engine = new OramaFactSearchEngine(orama);
+    let results = await engine.searchFacts("Kate", 10);
+    assert(results.length > 0);
+
+    // Cleanup (remove event listeners)
+    cleanup();
+
+    // Add another quad after cleanup - should NOT sync to Orama
+    const testQuad2 = quad(
+      namedNode("http://example.org/lisa"),
+      namedNode("http://xmlns.com/foaf/0.1/name"),
+      literal("Lisa"),
+      DataFactory.defaultGraph(),
+    );
+    await interceptor.put(testQuad2);
+
+    // Verify Kate is still there (from before cleanup)
+    results = await engine.searchFacts("Kate", 10);
+    assert(results.length > 0, "Kate should still be in Orama");
+
+    // Verify Lisa is NOT in Orama (added after cleanup)
+    results = await engine.searchFacts("Lisa", 10);
+    const lisaResult = results.find((r) => r.object === "Lisa");
+    assert(
+      lisaResult === undefined,
+      "Lisa should NOT be in Orama because cleanup was called",
+    );
+  },
+);
+
+Deno.test(
+  "syncStoreInterceptorWithOrama - integration with OramaFactSearchEngine",
+  async () => {
+    const store = new Store();
+    const interceptor = new StoreInterceptor(store);
+    const orama = createOramaTripleStore();
+    const cleanup = syncStoreInterceptorWithOrama(interceptor, orama);
 
     try {
-      // CREATE: Add triple using import (triggers sync to Orama)
-      const stream = await createQuadStream(quadGenerator());
-      const importResult = interceptor.import(stream);
+      // Add multiple quads with different objects
+      const quads = [
+        quad(
+          namedNode("http://example.org/mike"),
+          namedNode("http://xmlns.com/foaf/0.1/name"),
+          literal("Mike"),
+          DataFactory.defaultGraph(),
+        ),
+        quad(
+          namedNode("http://example.org/nancy"),
+          namedNode("http://xmlns.com/foaf/0.1/name"),
+          literal("Nancy"),
+          DataFactory.defaultGraph(),
+        ),
+        quad(
+          namedNode("http://example.org/oscar"),
+          namedNode("http://xmlns.com/foaf/0.1/name"),
+          literal("Oscar"),
+          DataFactory.defaultGraph(),
+        ),
+      ];
 
-      // Wait for stream to finish emitting
-      await new Promise<void>((resolve) => {
-        stream.on("end", () => resolve());
-        stream.on("error", () => resolve());
-      });
-
-      // Wait for import operation to complete
-      await new Promise<void>((resolve) => {
-        importResult.on("end", () => resolve());
-        importResult.on("error", () => resolve());
-      });
-
-      // Wait for sync to complete
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // READ: Verify we can read from both
-      const readResults = await searchEngine.searchFacts("Product", 10);
-      assertEquals(readResults.length, 1);
-      assertEquals(readResults[0].object, "Product Name");
-
-      // Quadstore's match returns an async iterable
-      const storeStream = interceptor.match(
-        DataFactory.namedNode("http://example.org/product"),
-        undefined,
-        undefined,
-        undefined,
-      );
-      const storeQuads: Quad[] = [];
-      if (Symbol.asyncIterator in storeStream) {
-        for await (const q of storeStream as unknown as AsyncIterable<Quad>) {
-          storeQuads.push(q);
-        }
-      } else if (typeof storeStream.read === "function") {
-        let q: Quad | null;
-        while ((q = storeStream.read()) !== null) {
-          storeQuads.push(q);
-        }
+      for (const q of quads) {
+        await interceptor.put(q);
       }
-      assertEquals(storeQuads.length, 1);
 
-      // DELETE: Remove and sync from Orama (sync function handles this automatically)
-      interceptor.removeMatches(
-        DataFactory.namedNode("http://example.org/product"),
-        undefined,
-        undefined,
-        undefined,
+      // Use OramaFactSearchEngine to search
+      const engine = new OramaFactSearchEngine(orama);
+      const results = await engine.searchFacts("Nancy", 10);
+
+      // Verify search works correctly
+      assert(results.length > 0);
+      const nancyResult = results.find(
+        (r) => r.object === "Nancy" && r.subject === "http://example.org/nancy",
       );
-
-      // Wait for removal sync to complete
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Verify deletion from store
-      // Quadstore's match returns an async iterable
-      const finalStream = interceptor.match(
-        DataFactory.namedNode("http://example.org/product"),
-        undefined,
-        undefined,
-        undefined,
-      );
-      const finalQuads: Quad[] = [];
-      if (Symbol.asyncIterator in finalStream) {
-        for await (const q of finalStream as unknown as AsyncIterable<Quad>) {
-          finalQuads.push(q);
-        }
-      } else {
-        const stream = finalStream as { read?: () => Quad | null };
-        if (stream.read) {
-          let finalQ: Quad | null;
-          while ((finalQ = stream.read()) !== null) {
-            finalQuads.push(finalQ);
-          }
-        }
-      }
-      assertEquals(finalQuads.length, 0);
-
-      // Verify it was removed from Orama (sync should have handled this)
-      const finalSearchResults = await searchEngine.searchFacts("Product", 10);
-      assertEquals(finalSearchResults.length, 0);
+      assert(nancyResult !== undefined);
+      assertEquals(nancyResult.predicate, "http://xmlns.com/foaf/0.1/name");
+      assert(typeof nancyResult.score === "number");
     } finally {
-      cleanupSync();
-      await store.close();
+      cleanup();
     }
   },
 );
