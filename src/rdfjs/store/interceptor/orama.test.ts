@@ -1,23 +1,42 @@
 import { assertEquals } from "@std/assert";
 import { MemoryLevel } from "memory-level";
-import type { Quad } from "@rdfjs/types";
+import type { Quad, Stream } from "@rdfjs/types";
 import DataFactory from "@rdfjs/data-model";
-import { insert, remove as oramaRemove } from "@orama/orama";
+import { insert } from "@orama/orama";
+import { Readable } from "node:stream";
 import { Quadstore } from "quadstore";
 import {
   createOramaTripleStore,
   OramaFactSearchEngine,
 } from "#/tools/search-facts/engines/orama/orama.ts";
-import type { StreamEventDetail } from "./interceptor.ts";
 import { StoreInterceptor } from "./interceptor.ts";
+import { fromQuad, syncStoreInterceptorWithOrama } from "./orama.ts";
 
-function fromQuad(quad: Quad) {
-  return {
-    subject: quad.subject.value,
-    predicate: quad.predicate.value,
-    object: quad.object.value,
-    graph: quad.graph.value || "",
-  };
+/**
+ * Creates a stream from an async iterable of quads.
+ * Uses Node.js Readable stream for proper compatibility with Quadstore.
+ */
+async function createQuadStream(
+  quads: AsyncIterable<Quad>,
+): Promise<Stream<Quad>> {
+  const quadArray: Quad[] = [];
+  for await (const quad of quads) {
+    quadArray.push(quad);
+  }
+
+  let index = 0;
+  const readable = new Readable({
+    objectMode: true,
+    read() {
+      if (index < quadArray.length) {
+        this.push(quadArray[index++]);
+      } else {
+        this.push(null);
+      }
+    },
+  });
+
+  return readable as unknown as Stream<Quad>;
 }
 
 async function createQuadstoreInstance() {
@@ -40,47 +59,46 @@ Deno.test(
     const { oramaStore, searchEngine } = createOramaSyncInstance();
     const interceptor = new StoreInterceptor(store);
 
-    // Listen for import events and sync to Orama
-    const syncPromises: Promise<void>[] = [];
-    interceptor.on("import", (detail: StreamEventDetail) => {
-      const stream = detail.stream;
-      const syncPromise = (async () => {
-        // Consume the stream and add to Orama
-        if (typeof stream.read === "function") {
-          let quad: Quad | null;
-          while ((quad = stream.read()) !== null) {
-            await insert(oramaStore, fromQuad(quad));
-          }
-        } else if (Symbol.asyncIterator in stream) {
-          for await (const quad of stream as unknown as AsyncIterable<Quad>) {
-            await insert(oramaStore, fromQuad(quad));
-          }
-        }
-        // Also handle EventEmitter streams
-        if (stream.on) {
-          await new Promise<void>((resolve) => {
-            stream.on("data", async (quad: Quad) => {
-              await insert(oramaStore, fromQuad(quad));
-            });
-            stream.on("end", () => resolve());
-          });
-        }
-      })();
-      syncPromises.push(syncPromise);
-    });
+    // Set up synchronization between the interceptor and Orama store.
+    const cleanupSync = syncStoreInterceptorWithOrama(interceptor, oramaStore);
+
+    // Add a triple to the store using import (triggers sync to Orama)
+    const quad = DataFactory.quad(
+      DataFactory.namedNode("http://example.org/alice"),
+      DataFactory.namedNode("http://schema.org/name"),
+      DataFactory.literal("Alice"),
+      DataFactory.defaultGraph(),
+    );
+
+    // Create a stream generator function
+    async function* quadGenerator() {
+      yield quad;
+    }
 
     try {
-      // Add a triple to the store using put (simpler than stream import)
-      const quad = DataFactory.quad(
-        DataFactory.namedNode("http://example.org/alice"),
-        DataFactory.namedNode("http://schema.org/name"),
-        DataFactory.literal("Alice"),
-        DataFactory.defaultGraph(),
-      );
+      // Create a stream with the quad and import it (this triggers the sync)
+      const stream = await createQuadStream(quadGenerator());
+      const importResult = interceptor.import(stream);
 
-      // Use put directly - this doesn't trigger import event, so we'll manually sync
-      await store.put(quad);
-      await insert(oramaStore, fromQuad(quad));
+      // Wait for stream to finish (Readable stream)
+      await new Promise<void>((resolve) => {
+        if (stream.on) {
+          stream.on("end", () => resolve());
+          stream.on("error", () => resolve());
+        } else {
+          // If no event emitter, wait a bit for consumption
+          setTimeout(() => resolve(), 50);
+        }
+      });
+
+      // Wait for import operation to complete
+      await new Promise<void>((resolve) => {
+        importResult.on("end", () => resolve());
+        importResult.on("error", () => resolve());
+      });
+
+      // Wait for async sync operations to complete (inserts into Orama)
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Verify the triple was added to the store
       // Quadstore's match returns an async iterable
@@ -113,6 +131,7 @@ Deno.test(
       assertEquals(results[0].predicate, "http://schema.org/name");
       assertEquals(results[0].object, "Alice");
     } finally {
+      cleanupSync();
       await store.close();
     }
   },
@@ -188,7 +207,10 @@ Deno.test(
     const { oramaStore, searchEngine } = createOramaSyncInstance();
     const interceptor = new StoreInterceptor(store);
 
-    // Add initial data to both store and Orama
+    // Set up synchronization between the interceptor and Orama store.
+    const cleanupSync = syncStoreInterceptorWithOrama(interceptor, oramaStore);
+
+    // Add initial data to both store and Orama using import (triggers sync)
     const quad = DataFactory.quad(
       DataFactory.namedNode("http://example.org/book"),
       DataFactory.namedNode("http://schema.org/name"),
@@ -196,40 +218,36 @@ Deno.test(
       DataFactory.defaultGraph(),
     );
 
+    // Create a stream generator function
+    async function* quadGenerator() {
+      yield quad;
+    }
+
     try {
-      await store.put(quad);
-      await insert(oramaStore, fromQuad(quad));
+      // Import the quad (this triggers sync to Orama)
+      const stream = await createQuadStream(quadGenerator());
+      const importResult = interceptor.import(stream);
+
+      // Wait for stream to finish emitting
+      await new Promise<void>((resolve) => {
+        stream.on("end", () => resolve());
+        stream.on("error", () => resolve());
+      });
+
+      // Wait for import operation to complete
+      await new Promise<void>((resolve) => {
+        importResult.on("end", () => resolve());
+        importResult.on("error", () => resolve());
+      });
+
+      // Wait for sync to complete
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Verify it exists in both
       const beforeResults = await searchEngine.searchFacts("Book", 10);
       assertEquals(beforeResults.length, 1);
 
-      // Listen for removematches events and sync to Orama
-      // Note: In a real implementation, you'd track document IDs when inserting
-      // For this test, we'll verify the sync mechanism is triggered
-      let removematchesEventFired = false;
-      const removePromise = new Promise<void>((resolve) => {
-        interceptor.on("removematches", async (_detail) => {
-          removematchesEventFired = true;
-          // In a real implementation, you would:
-          // 1. Match the quads being removed from the store
-          // 2. Find the corresponding documents in Orama
-          // 3. Remove them using the document IDs you tracked during insertion
-          // For this test, we'll manually remove using the known document structure
-          const doc = fromQuad(quad);
-          try {
-            // Orama's remove requires the document ID - in practice you'd track this
-            // For testing, we try to remove using the document structure
-            await oramaRemove(oramaStore, doc as unknown as string);
-          } catch {
-            // If remove fails, we'll manually verify the sync mechanism worked
-            // by checking that the event was fired
-          }
-          resolve();
-        });
-      });
-
-      // Remove the triple from the store
+      // Remove the triple from the store (this triggers sync removal from Orama)
       interceptor.removeMatches(
         DataFactory.namedNode("http://example.org/book"),
         undefined,
@@ -237,12 +255,8 @@ Deno.test(
         undefined,
       );
 
-      // Wait for removal to complete
-      await removePromise;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Verify the removematches event was fired (sync mechanism triggered)
-      assertEquals(removematchesEventFired, true);
+      // Wait for removal sync to complete
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Verify it was removed from the store
       // Quadstore's match returns an async iterable
@@ -268,10 +282,11 @@ Deno.test(
       }
       assertEquals(remainingQuads.length, 0);
 
-      // Note: Orama removal verification would require tracking document IDs
-      // In a real implementation, you'd track IDs during insert and use them for removal
-      // For this test, we verify the sync mechanism (event) was triggered
+      // Verify it was removed from Orama (sync should have handled this)
+      const afterResults = await searchEngine.searchFacts("Book", 10);
+      assertEquals(afterResults.length, 0);
     } finally {
+      cleanupSync();
       await store.close();
     }
   },
@@ -284,6 +299,9 @@ Deno.test(
     const { oramaStore, searchEngine } = createOramaSyncInstance();
     const interceptor = new StoreInterceptor(store);
 
+    // Set up synchronization between the interceptor and Orama store.
+    const cleanupSync = syncStoreInterceptorWithOrama(interceptor, oramaStore);
+
     const quad = DataFactory.quad(
       DataFactory.namedNode("http://example.org/product"),
       DataFactory.namedNode("http://schema.org/name"),
@@ -291,11 +309,30 @@ Deno.test(
       DataFactory.defaultGraph(),
     );
 
+    // Create a stream generator function
+    async function* quadGenerator() {
+      yield quad;
+    }
+
     try {
-      // CREATE: Add triple and sync to Orama
-      // Use put directly and manually sync to Orama
-      await store.put(quad);
-      await insert(oramaStore, fromQuad(quad));
+      // CREATE: Add triple using import (triggers sync to Orama)
+      const stream = await createQuadStream(quadGenerator());
+      const importResult = interceptor.import(stream);
+
+      // Wait for stream to finish emitting
+      await new Promise<void>((resolve) => {
+        stream.on("end", () => resolve());
+        stream.on("error", () => resolve());
+      });
+
+      // Wait for import operation to complete
+      await new Promise<void>((resolve) => {
+        importResult.on("end", () => resolve());
+        importResult.on("error", () => resolve());
+      });
+
+      // Wait for sync to complete
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // READ: Verify we can read from both
       const readResults = await searchEngine.searchFacts("Product", 10);
@@ -322,24 +359,7 @@ Deno.test(
       }
       assertEquals(storeQuads.length, 1);
 
-      // DELETE: Remove and sync from Orama
-      // Listen for removematches and sync removal
-      let removematchesEventFired = false;
-      const removePromise = new Promise<void>((resolve) => {
-        interceptor.on("removematches", async (_detail) => {
-          removematchesEventFired = true;
-          // In a real implementation, you'd track document IDs during insertion
-          // and use them for removal. For this test, we verify the sync mechanism.
-          const doc = fromQuad(quad);
-          try {
-            await oramaRemove(oramaStore, doc as unknown as string);
-          } catch {
-            // If remove fails, that's okay - the sync mechanism is what we're testing
-          }
-          resolve();
-        });
-      });
-
+      // DELETE: Remove and sync from Orama (sync function handles this automatically)
       interceptor.removeMatches(
         DataFactory.namedNode("http://example.org/product"),
         undefined,
@@ -347,12 +367,8 @@ Deno.test(
         undefined,
       );
 
-      // Wait for removal to complete
-      await removePromise;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Verify the removematches event was fired (sync mechanism triggered)
-      assertEquals(removematchesEventFired, true);
+      // Wait for removal sync to complete
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Verify deletion from store
       // Quadstore's match returns an async iterable
@@ -378,10 +394,11 @@ Deno.test(
       }
       assertEquals(finalQuads.length, 0);
 
-      // Note: Orama removal verification would require tracking document IDs
-      // In a real implementation, you'd track IDs during insert and use them for removal
-      // For this test, we verify the sync mechanism (event) was triggered and store deletion worked
+      // Verify it was removed from Orama (sync should have handled this)
+      const finalSearchResults = await searchEngine.searchFacts("Product", 10);
+      assertEquals(finalSearchResults.length, 0);
     } finally {
+      cleanupSync();
       await store.close();
     }
   },
