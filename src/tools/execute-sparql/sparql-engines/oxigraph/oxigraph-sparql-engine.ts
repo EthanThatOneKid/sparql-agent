@@ -1,5 +1,8 @@
 import { Store } from "oxigraph";
-import type { ExecuteSparqlOutput, SparqlEngine } from "../../sparql-engine.ts";
+import type {
+  ExecuteSparqlOutput,
+  SparqlEngine,
+} from "#/tools/execute-sparql/sparql-engine.ts";
 
 export type OxigraphQueryOptions = Parameters<Store["query"]>[1];
 

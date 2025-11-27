@@ -9,8 +9,8 @@ import {
   OramaSearchEngine,
 } from "#/tools/search-facts/search-engines/orama/orama-search-engine.ts";
 import { syncOrama } from "#/tools/search-facts/search-engines/orama/sync-orama.ts";
-import { ComunicaSparqlEngine } from "#/tools/execute-sparql/sparql-engines/comunica/comunica.ts";
-import { SparqljsSparqlValidator } from "#/tools/validate-sparql/validators/sparqljs/sparqljs.ts";
+import { ComunicaSparqlEngine } from "#/tools/execute-sparql/sparql-engines/comunica/comunica-sparql-engine.ts";
+import { SparqljsSparqlValidator } from "#/tools/validate-sparql/validators/sparqljs/sparqljs-sparql-validator.ts";
 
 if (import.meta.main) {
   const iriPrefix = "https://fartlabs.org/.well-known/genid/";

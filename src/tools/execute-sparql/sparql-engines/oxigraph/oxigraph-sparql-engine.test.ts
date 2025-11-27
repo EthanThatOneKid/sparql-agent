@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { Store } from "oxigraph";
-import { OxigraphSparqlEngine } from "./oxigraph.ts";
+import { OxigraphSparqlEngine } from "./oxigraph-sparql-engine.ts";
 
 function createPopulatedOxigraphStore(): Store {
   const store = new Store();

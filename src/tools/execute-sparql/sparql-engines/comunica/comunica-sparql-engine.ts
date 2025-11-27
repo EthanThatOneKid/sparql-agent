@@ -5,7 +5,10 @@ import type {
   QueryAlgebraContext,
 } from "@comunica/types";
 import type { QueryEngine } from "@comunica/query-sparql";
-import type { ExecuteSparqlOutput, SparqlEngine } from "../../sparql-engine.ts";
+import type {
+  ExecuteSparqlOutput,
+  SparqlEngine,
+} from "#/tools/execute-sparql/sparql-engine.ts";
 
 export class ComunicaSparqlEngine implements SparqlEngine {
   public constructor(
