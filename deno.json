@@ -24,10 +24,10 @@
     "sparqljs": "npm:sparqljs@^3.7.3"
   },
   "tasks": {
-    "start": "deno -A --env main.ts",
+    "start": "deno -A --env --unstable-raw-imports main.ts",
     "fmt": "deno fmt",
     "lint": "deno lint",
-    "check": "deno check",
+    "check": "deno check --unstable-raw-imports",
     "test": "deno test --allow-env --allow-sys --allow-read",
     "precommit": {
       "description": "Run all pre-commit tasks",

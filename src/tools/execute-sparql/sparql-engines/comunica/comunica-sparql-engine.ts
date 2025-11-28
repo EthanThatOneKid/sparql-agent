@@ -10,14 +10,38 @@ import type {
   SparqlEngine,
 } from "#/tools/execute-sparql/sparql-engine.ts";
 
+/**
+ * ComunicaSparqlEngineOptions are the options for creating a
+ * ComunicaSparqlEngine.
+ */
+export interface ComunicaSparqlEngineOptions {
+  /**
+   * queryEngine is the Comunica QueryEngine to use for executing SPARQL queries.
+   */
+  queryEngine: InstanceType<typeof QueryEngine>;
+
+  /**
+   * context is the context for the Comunica QueryEngine.
+   */
+  context?: QueryAlgebraContext;
+}
+
+/**
+ * ComunicaSparqlEngine is a SPARQL engine that uses Comunica.
+ *
+ * ComunicaSparqlEngine narrows the scope of the Comunica QueryEngine
+ * to a simplified API for executing SPARQL queries.
+ */
 export class ComunicaSparqlEngine implements SparqlEngine {
   public constructor(
-    private readonly queryEngine: InstanceType<typeof QueryEngine>,
-    private readonly context?: QueryAlgebraContext,
+    private readonly options: ComunicaSparqlEngineOptions,
   ) {}
 
   public async executeSparql(query: string): Promise<ExecuteSparqlOutput> {
-    const result = await this.queryEngine.query(query, this.context);
+    const result = await this.options.queryEngine.query(
+      query,
+      this.options.context,
+    );
     switch (result.resultType) {
       case "bindings": {
         const bindingsStream = await result.execute();

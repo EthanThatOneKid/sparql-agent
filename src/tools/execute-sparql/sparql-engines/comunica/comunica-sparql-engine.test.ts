@@ -41,10 +41,10 @@ function createPopulatedN3Store(): Store {
 
 function createEngine(store: Store): ComunicaSparqlEngine {
   const queryEngine = new QueryEngine();
-  return new ComunicaSparqlEngine(
-    queryEngine as unknown as InstanceType<typeof QueryEngine>,
-    { sources: [store] },
-  );
+  return new ComunicaSparqlEngine({
+    queryEngine: queryEngine as unknown as InstanceType<typeof QueryEngine>,
+    context: { sources: [store] },
+  });
 }
 
 Deno.test("ComunicaSparqlEngine executes SELECT queries", async () => {
@@ -109,10 +109,10 @@ Deno.test("ComunicaSparqlEngine executes CONSTRUCT queries", async () => {
 Deno.test("ComunicaSparqlEngine executes UPDATE queries", async () => {
   const store = createPopulatedN3Store();
   const queryEngine = new QueryEngine();
-  const engine = new ComunicaSparqlEngine(
-    queryEngine as unknown as InstanceType<typeof QueryEngine>,
-    { sources: [store], destination: store },
-  );
+  const engine = new ComunicaSparqlEngine({
+    queryEngine: queryEngine as unknown as InstanceType<typeof QueryEngine>,
+    context: { sources: [store], destination: store },
+  });
 
   const result = await engine.executeSparql(`
     PREFIX ex: <http://example.org/>
