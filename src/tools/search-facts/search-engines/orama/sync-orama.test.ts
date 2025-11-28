@@ -100,7 +100,7 @@ Deno.test("e2e: Comunica SPARQL INSERT syncs quads to Orama and makes them searc
   const rdfStore = new Store();
   const orama = createFactOrama();
   const searchEngine = new OramaSearchEngine(orama);
-  const syncedStore = syncOrama(rdfStore, orama);
+  const syncedStore = syncOrama(orama, rdfStore);
 
   // Set up Comunica query engine using the synced store
   const queryEngine = new QueryEngine();
@@ -167,7 +167,7 @@ Deno.test("e2e: Comunica SPARQL DELETE removes quads from Orama", async () => {
   const rdfStore = new Store();
   const orama = createFactOrama();
   const searchEngine = new OramaSearchEngine(orama);
-  const syncedStore = syncOrama(rdfStore, orama);
+  const syncedStore = syncOrama(orama, rdfStore);
 
   const queryEngine = new QueryEngine();
   const context: QueryAlgebraContext = {
@@ -237,7 +237,7 @@ function setup() {
   const store = new Store();
   const orama = createFactOrama();
   const searchEngine = new OramaSearchEngine(orama);
-  const syncedStore = syncOrama(store, orama);
+  const syncedStore = syncOrama(orama, store);
   return { store, orama, searchEngine, syncedStore };
 }
 

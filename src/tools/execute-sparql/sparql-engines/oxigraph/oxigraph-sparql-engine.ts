@@ -14,6 +14,6 @@ export class OxigraphSparqlEngine implements SparqlEngine {
 
   public executeSparql(query: string): Promise<ExecuteSparqlOutput> {
     const result = this.store.query(query, this.options);
-    return Promise.resolve(result);
+    return Promise.resolve({ result });
   }
 }

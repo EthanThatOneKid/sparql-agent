@@ -1,5 +1,5 @@
 import type { LanguageModel } from "ai";
-import { generateText } from "ai";
+import { generateText, stepCountIs } from "ai";
 import type { IriGenerator } from "#/tools/generate-iri/iri-generator.ts";
 import { createGenerateIriTool } from "#/tools/generate-iri/tool.ts";
 import type { SparqlEngine } from "#/tools/execute-sparql/sparql-engine.ts";
@@ -13,6 +13,24 @@ import sparqlSystemPrompt from "./prompt.md" with { type: "text" };
 export interface GenerateSparqlOptions {
   model: LanguageModel;
   tools: GenerateSparqlTools;
+  context?: GenerateSparqlContext;
+}
+
+export interface GenerateSparqlContext {
+  /**
+   * userIri is the IRI of the user speaking to the assistant.
+   */
+  userIri?: string;
+
+  /**
+   * assistantIri is the IRI of the assistant speaking to the user.
+   */
+  assistantIri?: string;
+
+  /**
+   * formatDate formats the time of writing the query.
+   */
+  formatDate?: () => string;
 }
 
 export interface GenerateSparqlTools {
@@ -37,19 +55,40 @@ export async function generateSparql(
   prompt: string,
   options: GenerateSparqlOptions,
 ) {
-  return await generateText({
+  const result = await generateText({
     model: options.model,
     system: sparqlSystemPrompt,
-    prompt: sparqlPrompt(prompt),
+    prompt: formatPrompt(prompt, options.context),
     tools: {
       generateIri: createGenerateIriTool(options.tools.iriGenerator),
       searchFacts: createSearchFactsTool(options.tools.searchEngine),
       executeSparql: createExecuteSparqlTool(options.tools.sparqlEngine),
       validateSparql: createValidateSparqlTool(options.tools.sparqlValidator),
     },
+    stopWhen: stepCountIs(100),
   });
+
+  return result;
 }
 
-export function sparqlPrompt(prompt: string) {
-  return `Generate a SPARQL query for the following prompt: ${prompt}`;
+export function formatPrompt(prompt: string, context?: GenerateSparqlContext) {
+  const parts: string[] = [];
+  if (context?.userIri) {
+    parts.push(
+      `The user's IRI is <${context.userIri}>. When the prompt references the user (explicitly or implicitly through first-person pronouns such as "me", "I", "we", etc.), use this IRI to represent the user in the generated SPARQL query.`,
+    );
+  }
+
+  if (context?.assistantIri) {
+    parts.push(
+      `The assistant's IRI is <${context.assistantIri}>. When the prompt references the assistant (explicitly or implicitly through second-person pronouns such as "you", "your", "yours", etc.), use this IRI to represent the assistant in the generated SPARQL query.`,
+    );
+  }
+
+  if (context?.formatDate) {
+    parts.push(`The time of writing the query is ${context.formatDate()}.`);
+  }
+
+  parts.push(`Generate a SPARQL query for the following prompt: ${prompt}`);
+  return parts.join(" ");
 }

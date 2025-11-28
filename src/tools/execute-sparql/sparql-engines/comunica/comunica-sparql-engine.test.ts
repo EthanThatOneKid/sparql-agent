@@ -51,7 +51,7 @@ Deno.test("ComunicaSparqlEngine executes SELECT queries", async () => {
   const store = createPopulatedN3Store();
   const engine = createEngine(store);
 
-  const result = await engine.executeSparql(`
+  const { result } = await engine.executeSparql(`
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     SELECT ?name ?age WHERE {
       ?person foaf:name ?name .
@@ -72,7 +72,7 @@ Deno.test("ComunicaSparqlEngine executes ASK queries", async () => {
   const store = createPopulatedN3Store();
   const engine = createEngine(store);
 
-  const result = await engine.executeSparql(`
+  const { result } = await engine.executeSparql(`
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     ASK WHERE {
       ?person foaf:name "Bob" .
@@ -86,7 +86,7 @@ Deno.test("ComunicaSparqlEngine executes CONSTRUCT queries", async () => {
   const store = createPopulatedN3Store();
   const engine = createEngine(store);
 
-  const result = await engine.executeSparql(`
+  const { result } = await engine.executeSparql(`
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     CONSTRUCT {
       ?person foaf:name ?name .
@@ -114,7 +114,7 @@ Deno.test("ComunicaSparqlEngine executes UPDATE queries", async () => {
     context: { sources: [store], destination: store },
   });
 
-  const result = await engine.executeSparql(`
+  const { result } = await engine.executeSparql(`
     PREFIX ex: <http://example.org/>
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     INSERT DATA {

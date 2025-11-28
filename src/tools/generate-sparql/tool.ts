@@ -4,11 +4,13 @@ import type { GenerateSparqlOptions } from "./generate-sparql.ts";
 import { generateSparql } from "./generate-sparql.ts";
 
 export const generateSparqlInputSchema = z.object({
-  prompt: z.string(),
+  prompt: z.string().describe(
+    "Natural language prompt or SPARQL query. If it's already valid SPARQL, it will be executed directly. Otherwise, it will be generated first.",
+  ),
 });
 
 export const generateSparqlOutputSchema = z.object({
-  query: z.string(),
+  query: z.string().describe("The SPARQL query that was generated"),
 });
 
 /**

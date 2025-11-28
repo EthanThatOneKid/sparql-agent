@@ -9,7 +9,7 @@ import { toOramaDocument, toOramaDocumentId } from "./to-orama-document.ts";
 /**
  * syncOrama synchronizes an Orama search engine with an RDF/JS Store interceptor.
  */
-export function syncOrama(store: Store, orama: FactOrama): Store {
+export function syncOrama(orama: FactOrama, store: Store): Store {
   return createInterceptorStore(store, (event) => {
     switch (event.methodName) {
       case "import": {
@@ -130,6 +130,23 @@ function normalizeGraph(
 
 function reportSyncError(error: unknown) {
   console.error("syncOrama error", error);
+}
+
+/**
+ * insertStoreIntoOrama inserts all quads from an RDF/JS Store into an Orama fact store.
+ * This is useful for initial synchronization when loading persisted data, where
+ * the RDF store has data but Orama needs to be populated.
+ */
+export async function insertStoreIntoOrama(
+  orama: FactOrama,
+  store: Store,
+): Promise<void> {
+  // Get all quads from the store by matching everything (null matches all).
+  const matchStream = store.match(null, null, null, null);
+  const quads = await collectQuadsFromStream(matchStream);
+  if (quads.length > 0) {
+    await insertQuadsIntoOrama(orama, quads);
+  }
 }
 
 /**

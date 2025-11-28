@@ -21,7 +21,7 @@ Deno.test("OxigraphSparqlEngine executes SELECT queries and returns bindings map
   const store = createPopulatedOxigraphStore();
   const engine = new OxigraphSparqlEngine(store);
 
-  const result = await engine.executeSparql(`
+  const { result } = await engine.executeSparql(`
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     SELECT ?name ?age WHERE {
       ?person foaf:name ?name ;
@@ -45,7 +45,7 @@ Deno.test("OxigraphSparqlEngine executes ASK queries and returns boolean", async
   const store = createPopulatedOxigraphStore();
   const engine = new OxigraphSparqlEngine(store);
 
-  const askResult = await engine.executeSparql(`
+  const { result: askResult } = await engine.executeSparql(`
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     ASK WHERE {
       ?person foaf:name "Bob" .

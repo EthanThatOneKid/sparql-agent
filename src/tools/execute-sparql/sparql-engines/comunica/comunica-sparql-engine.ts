@@ -45,23 +45,21 @@ export class ComunicaSparqlEngine implements SparqlEngine {
     switch (result.resultType) {
       case "bindings": {
         const bindingsStream = await result.execute();
-        return await this.collectBindings(bindingsStream);
+        return { result: await this.collectBindings(bindingsStream) };
       }
 
       case "boolean": {
-        return await result.execute();
+        return { result: await result.execute() };
       }
 
       case "quads": {
         const quadStream = await result.execute();
-        return await this.collectQuads(quadStream);
+        return { result: await this.collectQuads(quadStream) };
       }
 
       case "void": {
         await result.execute();
-
-        // TODO: Return message as string.
-        return "";
+        return { result: "" };
       }
 
       default: {
