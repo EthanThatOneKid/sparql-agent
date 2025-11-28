@@ -1,5 +1,5 @@
 import type { ModelMessage } from "ai";
-import { generateText } from "ai";
+import { generateText, stepCountIs } from "ai";
 import { google } from "@ai-sdk/google";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { UlidIriGenerator } from "#/tools/generate-iri/iri-generators/ulid/ulid-iri-generator.ts";
@@ -47,6 +47,7 @@ if (import.meta.main) {
       tools: {
         generateAndExecuteSparql: tools.generateAndExecuteSparql,
       },
+      stopWhen: stepCountIs(100),
     });
 
     messages.push({

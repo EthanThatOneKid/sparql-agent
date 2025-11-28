@@ -30,7 +30,7 @@ export const executeSparqlOutputSchema = z.object({
   result: z.union([
     z.string(),
     z.boolean(),
-    z.array(z.map(z.string(), termSchema)),
+    z.array(sparqlBindingsSchema),
     z.array(quadSchema),
   ]).describe(
     "The result of executing the SPARQL query (string for DESCRIBE, boolean for ASK, array of bindings for SELECT, array of quads for CONSTRUCT)",

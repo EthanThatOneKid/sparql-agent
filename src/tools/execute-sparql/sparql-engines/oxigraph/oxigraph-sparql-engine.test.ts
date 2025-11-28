@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { Store } from "oxigraph";
+import type { SparqlBindings } from "#/tools/execute-sparql/sparql-engine.ts";
 import { OxigraphSparqlEngine } from "./oxigraph-sparql-engine.ts";
 
 function createPopulatedOxigraphStore(): Store {
@@ -17,7 +18,7 @@ function createPopulatedOxigraphStore(): Store {
   return store;
 }
 
-Deno.test("OxigraphSparqlEngine executes SELECT queries and returns bindings maps", async () => {
+Deno.test("OxigraphSparqlEngine executes SELECT queries and returns binding records", async () => {
   const store = createPopulatedOxigraphStore();
   const engine = new OxigraphSparqlEngine(store);
 
@@ -33,10 +34,12 @@ Deno.test("OxigraphSparqlEngine executes SELECT queries and returns bindings map
   assert(Array.isArray(result));
   assertEquals(result.length, 2);
 
-  const firstBinding = result[0];
-  assert(firstBinding instanceof Map);
+  const bindings = result as SparqlBindings[];
 
-  const nameTerm = firstBinding.get("name");
+  const firstBinding = bindings[0];
+  assert(typeof firstBinding === "object" && firstBinding !== null);
+
+  const nameTerm = firstBinding.name;
   assert(nameTerm);
   assertEquals(nameTerm.value, "Alice");
 });

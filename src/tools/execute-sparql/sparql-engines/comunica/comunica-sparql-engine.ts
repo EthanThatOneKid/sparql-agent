@@ -1,4 +1,4 @@
-import type { Term, Variable } from "@rdfjs/types";
+import type { Variable } from "@rdfjs/types";
 import type {
   Bindings,
   BindingsStream,
@@ -7,6 +7,7 @@ import type {
 import type { QueryEngine } from "@comunica/query-sparql";
 import type {
   ExecuteSparqlOutput,
+  SparqlBindings,
   SparqlEngine,
 } from "#/tools/execute-sparql/sparql-engine.ts";
 
@@ -70,22 +71,22 @@ export class ComunicaSparqlEngine implements SparqlEngine {
 
   private async collectBindings(
     stream: BindingsStream,
-  ): Promise<Array<Map<string, Term>>> {
-    const rows: Array<Map<string, Term>> = [];
+  ): Promise<SparqlBindings[]> {
+    const rows: SparqlBindings[] = [];
     for await (const binding of stream) {
-      rows.push(this.bindingToMap(binding));
+      rows.push(this.bindingToRecord(binding));
     }
 
     return rows;
   }
 
-  private bindingToMap(binding: Bindings): Map<string, Term> {
-    const map = new Map<string, Term>();
+  private bindingToRecord(binding: Bindings): SparqlBindings {
+    const record: SparqlBindings = {};
     for (const [variable, term] of binding) {
-      map.set(this.variableToName(variable), term);
+      record[this.variableToName(variable)] = term;
     }
 
-    return map;
+    return record;
   }
 
   private variableToName(variable: Variable | string): string {

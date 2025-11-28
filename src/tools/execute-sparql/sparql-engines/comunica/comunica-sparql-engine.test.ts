@@ -2,6 +2,7 @@ import { assert, assertEquals } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import type { Quad } from "@rdfjs/types";
+import type { SparqlBindings } from "#/tools/execute-sparql/sparql-engine.ts";
 import { ComunicaSparqlEngine } from "./comunica-sparql-engine.ts";
 
 function createPopulatedN3Store(): Store {
@@ -63,9 +64,10 @@ Deno.test("ComunicaSparqlEngine executes SELECT queries", async () => {
   assert(Array.isArray(result));
   assertEquals(result.length, 2);
 
-  const first = result[0];
-  assert(first instanceof Map);
-  assertEquals(first.get("name")?.value, "Alice");
+  const bindings = result as SparqlBindings[];
+  const first = bindings[0];
+  assert(typeof first === "object" && first !== null);
+  assertEquals(first.name?.value, "Alice");
 });
 
 Deno.test("ComunicaSparqlEngine executes ASK queries", async () => {
