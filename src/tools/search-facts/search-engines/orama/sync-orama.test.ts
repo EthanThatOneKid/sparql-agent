@@ -1,77 +1,12 @@
 import { assertEquals } from "@std/assert";
 import { EventEmitter } from "node:events";
 import DataFactory from "@rdfjs/data-model";
-import type { Quad, Store, Stream, Term } from "@rdfjs/types";
+import { Store } from "n3";
+import type * as RDF from "@rdfjs/types";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import type { QueryAlgebraContext } from "@comunica/types";
 import { createFactOrama, OramaSearchEngine } from "./orama-search-engine.ts";
 import { syncOrama } from "./sync-orama.ts";
-
-class MemoryStore implements Store {
-  #quads: Quad[] = [];
-
-  match(
-    subject?: Term | null,
-    predicate?: Term | null,
-    object?: Term | null,
-    graph?: Term | null,
-  ): Stream<Quad> {
-    const matches = this.#quads.filter((quad) =>
-      matchesTerm(quad.subject, subject) &&
-      matchesTerm(quad.predicate, predicate) &&
-      matchesTerm(quad.object, object) &&
-      matchesTerm(quad.graph, graph)
-    );
-    return streamFromQuads(matches);
-  }
-
-  import(stream: Stream<Quad>): EventEmitter {
-    return this.#consumeStream(stream, (quad) => {
-      this.#quads.push(quad);
-    });
-  }
-
-  remove(stream: Stream<Quad>): EventEmitter {
-    return this.#consumeStream(stream, (quad) => {
-      this.#quads = this.#quads.filter((existing) =>
-        !quadsEqual(existing, quad)
-      );
-    });
-  }
-
-  removeMatches(
-    subject?: Term | null,
-    predicate?: Term | null,
-    object?: Term | null,
-    graph?: Term | null,
-  ): EventEmitter {
-    const matches = this.#quads.filter((quad) =>
-      matchesTerm(quad.subject, subject) &&
-      matchesTerm(quad.predicate, predicate) &&
-      matchesTerm(quad.object, object) &&
-      matchesTerm(quad.graph, graph)
-    );
-    this.#quads = this.#quads.filter((quad) => !matches.includes(quad));
-    return emitImmediately();
-  }
-
-  deleteGraph(graph: Quad["graph"] | string): EventEmitter {
-    const normalized = typeof graph === "string"
-      ? DataFactory.namedNode(graph)
-      : graph;
-    this.#quads = this.#quads.filter((quad) =>
-      !matchesTerm(quad.graph, normalized)
-    );
-    return emitImmediately();
-  }
-
-  #consumeStream(stream: Stream<Quad>, onQuad: (quad: Quad) => void) {
-    const emitter = new EventEmitter();
-    const evented = stream as unknown as EventEmitter;
-    evented.on("data", (quad: Quad) => onQuad(quad));
-    evented.once("end", () => emitter.emit("end"));
-    evented.once("error", (error) => emitter.emit("error", error));
-    return emitter;
-  }
-}
 
 Deno.test("syncOrama inserts documents on import()", async () => {
   const { searchEngine, syncedStore } = setup();
@@ -160,8 +95,146 @@ Deno.test("syncOrama removes documents on deleteGraph()", async () => {
   assertEquals((await searchEngine.searchFacts("Bob", 10)).length, 1);
 });
 
+Deno.test("e2e: Comunica SPARQL INSERT syncs quads to Orama and makes them searchable", async () => {
+  // Set up the complete system: N3 store + Orama sync + Comunica engine
+  const rdfStore = new Store();
+  const orama = createFactOrama();
+  const searchEngine = new OramaSearchEngine(orama);
+  const syncedStore = syncOrama(rdfStore, orama);
+
+  // Set up Comunica query engine using the synced store
+  const queryEngine = new QueryEngine();
+  const context: QueryAlgebraContext = {
+    sources: [syncedStore],
+    destination: syncedStore,
+  };
+
+  // Execute SPARQL INSERT query via Comunica
+  await queryEngine.queryVoid(
+    `
+    PREFIX ex: <http://example.org/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    INSERT DATA {
+      ex:alice foaf:name "Alice" .
+      ex:alice foaf:age "30" .
+      ex:bob foaf:name "Bob" .
+    }
+  `,
+    context,
+  );
+
+  // Wait for async sync to complete
+  await flushAsync();
+
+  // Verify quads are in the RDF/JS store (via SELECT query)
+  const selectResult = await queryEngine.queryBindings(
+    `
+    PREFIX ex: <http://example.org/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    SELECT ?name WHERE {
+      ?person foaf:name ?name .
+    }
+    ORDER BY ?name
+  `,
+    context,
+  );
+
+  const names: string[] = [];
+  for await (const binding of selectResult) {
+    const name = binding.get("name");
+    if (name) {
+      names.push(name.value);
+    }
+  }
+  assertEquals(names.length, 2);
+  assertEquals(names[0], "Alice");
+  assertEquals(names[1], "Bob");
+
+  // Verify quads are searchable in Orama
+  const aliceResults = await searchEngine.searchFacts("Alice", 10);
+  assertEquals(aliceResults.length, 1);
+  assertEquals(aliceResults[0].object, "Alice");
+  assertEquals(aliceResults[0].subject, "http://example.org/alice");
+
+  const bobResults = await searchEngine.searchFacts("Bob", 10);
+  assertEquals(bobResults.length, 1);
+  assertEquals(bobResults[0].object, "Bob");
+  assertEquals(bobResults[0].subject, "http://example.org/bob");
+});
+
+Deno.test("e2e: Comunica SPARQL DELETE removes quads from Orama", async () => {
+  // Set up the complete system
+  const rdfStore = new Store();
+  const orama = createFactOrama();
+  const searchEngine = new OramaSearchEngine(orama);
+  const syncedStore = syncOrama(rdfStore, orama);
+
+  const queryEngine = new QueryEngine();
+  const context: QueryAlgebraContext = {
+    sources: [syncedStore],
+    destination: syncedStore,
+  };
+
+  // Insert data
+  await queryEngine.queryVoid(
+    `
+    PREFIX ex: <http://example.org/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    INSERT DATA {
+      ex:alice foaf:name "Alice" .
+      ex:bob foaf:name "Bob" .
+    }
+  `,
+    context,
+  );
+  await flushAsync();
+
+  // Verify both are searchable
+  assertEquals((await searchEngine.searchFacts("Alice", 10)).length, 1);
+  assertEquals((await searchEngine.searchFacts("Bob", 10)).length, 1);
+
+  // Delete Alice via SPARQL DELETE
+  await queryEngine.queryVoid(
+    `
+    PREFIX ex: <http://example.org/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    DELETE WHERE {
+      ex:alice foaf:name ?name .
+    }
+  `,
+    context,
+  );
+  await flushAsync();
+
+  // Verify Alice is removed from Orama, Bob remains
+  assertEquals((await searchEngine.searchFacts("Alice", 10)).length, 0);
+  assertEquals((await searchEngine.searchFacts("Bob", 10)).length, 1);
+
+  // Verify store state via SELECT
+  const selectResult = await queryEngine.queryBindings(
+    `
+    PREFIX ex: <http://example.org/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    SELECT ?name WHERE {
+      ?person foaf:name ?name .
+    }
+  `,
+    context,
+  );
+
+  const names: string[] = [];
+  for await (const binding of selectResult) {
+    const name = binding.get("name");
+    if (name) {
+      names.push(name.value);
+    }
+  }
+  assertEquals(names.length, 1);
+  assertEquals(names[0], "Bob");
+});
+
 function setup() {
-  const store = new MemoryStore();
+  const store = new Store();
   const orama = createFactOrama();
   const searchEngine = new OramaSearchEngine(orama);
   const syncedStore = syncOrama(store, orama);
@@ -173,7 +246,7 @@ function createQuad(
   predicate: string,
   object: string,
   graph = "http://example.org/graph/default",
-): Quad {
+): RDF.Quad {
   return DataFactory.quad(
     DataFactory.namedNode(subject),
     DataFactory.namedNode(predicate),
@@ -182,12 +255,12 @@ function createQuad(
   );
 }
 
-function createQuadStream(quads: Quad[]): Stream<Quad> {
+function createQuadStream(quads: RDF.Quad[]): RDF.Stream<RDF.Quad> {
   return streamFromQuads(quads);
 }
 
-function streamFromQuads(quads: Quad[]): Stream<Quad> {
-  const emitter = new EventEmitter() as Stream<Quad>;
+function streamFromQuads(quads: RDF.Quad[]): RDF.Stream<RDF.Quad> {
+  const emitter = new EventEmitter() as RDF.Stream<RDF.Quad>;
   emitter.read = () => null;
   queueMicrotask(() => {
     for (const quad of quads) {
@@ -196,35 +269,6 @@ function streamFromQuads(quads: Quad[]): Stream<Quad> {
     emitter.emit("end");
   });
   return emitter;
-}
-
-function emitImmediately(): EventEmitter {
-  const emitter = new EventEmitter();
-  queueMicrotask(() => emitter.emit("end"));
-  return emitter;
-}
-
-function matchesTerm(
-  term: Term | Quad["object"],
-  pattern?: Term | Quad["object"] | null,
-) {
-  if (pattern === undefined || pattern === null) {
-    return true;
-  }
-  if (typeof (term as Term).equals === "function") {
-    return (term as Term).equals(pattern as Term);
-  }
-  return term.termType === pattern.termType && term.value === pattern.value;
-}
-
-function quadsEqual(left: Quad, right: Quad) {
-  return matchesTerm(left.subject, right.subject) &&
-    matchesTerm(left.predicate, right.predicate) &&
-    matchesTerm(
-      left.object as unknown as Term,
-      right.object as unknown as Term,
-    ) &&
-    matchesTerm(left.graph, right.graph);
 }
 
 async function flushAsync() {

@@ -131,3 +131,39 @@ function normalizeGraph(
 function reportSyncError(error: unknown) {
   console.error("syncOrama error", error);
 }
+
+/**
+ * reifyQuad reifies a quad as a set of quads.
+ */
+function _reifyQuad(id: string, quad: Quad): Quad[] {
+  return [
+    DataFactory.quad(
+      DataFactory.namedNode(id),
+      DataFactory.namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+      DataFactory.namedNode(
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement",
+      ),
+    ),
+    DataFactory.quad(
+      DataFactory.namedNode(id),
+      DataFactory.namedNode(
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#subject",
+      ),
+      quad.subject,
+    ),
+    DataFactory.quad(
+      DataFactory.namedNode(id),
+      DataFactory.namedNode(
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate",
+      ),
+      quad.predicate,
+    ),
+    DataFactory.quad(
+      DataFactory.namedNode(id),
+      DataFactory.namedNode(
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#object",
+      ),
+      quad.object,
+    ),
+  ];
+}

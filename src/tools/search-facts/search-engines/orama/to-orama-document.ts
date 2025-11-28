@@ -5,7 +5,8 @@ import { skolemizeQuad } from "#/rdfjs/canon/rdfc-1-0.ts";
  * toOramaDocumentId converts an RDF/JS Quad to an Orama document ID.
  */
 export async function toOramaDocumentId(quad: Quad): Promise<string> {
-  return await skolemizeQuad(quad);
+  const skolemized = await skolemizeQuad(quad);
+  return `https://orama.fartlabs.org/.well-known/genid/${skolemized}`;
 }
 
 /**

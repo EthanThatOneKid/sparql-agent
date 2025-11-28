@@ -32,12 +32,8 @@ export interface GenerateSparqlTools {
 export async function generateSparql(options: GenerateSparqlOptions) {
   return await generateText({
     model: options.model,
-    prompt:
-      `Generate a SPARQL query for the following prompt: ${options.prompt}`,
-    system:
-      `You are a helpful assistant that generates a SPARQL query for a given prompt.
-    Always use the \`validateSparql\` tool to validate the query.
-    Return the query only if it is valid, otherwise try again.`,
+    system: sparqlSystemPrompt,
+    prompt: sparqlPrompt(options.prompt),
     tools: {
       generateIri: createGenerateIriTool(options.tools.iriGenerator),
       searchFacts: createSearchFactsTool(options.tools.searchEngine),
@@ -45,4 +41,13 @@ export async function generateSparql(options: GenerateSparqlOptions) {
       validateSparql: createValidateSparqlTool(options.tools.sparqlValidator),
     },
   });
+}
+
+export const sparqlSystemPrompt =
+  `You are a helpful assistant that generates a SPARQL query for a given prompt.
+  Always use the \`validateSparql\` tool to validate the query.
+  Return the query only if it is valid, otherwise try again.`;
+
+export function sparqlPrompt(prompt: string) {
+  return `Generate a SPARQL query for the following prompt: ${prompt}`;
 }
