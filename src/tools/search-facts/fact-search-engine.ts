@@ -13,8 +13,12 @@ export interface FactSearchEngine {
 export type SearchFactsInput = z.infer<typeof searchFactsInputSchema>;
 
 export const searchFactsInputSchema = z.object({
-  query: z.string(),
-  limit: z.number().min(1).max(100).optional(),
+  query: z.string().describe(
+    "The query to search for facts.",
+  ),
+  limit: z.number().min(1).max(100).optional().describe(
+    "The maximum number of facts to return.",
+  ),
 });
 
 /**

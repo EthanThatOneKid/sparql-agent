@@ -9,17 +9,10 @@ import {
   syncOrama,
 } from "#/tools/search-facts/search-engines/orama/sync-orama.ts";
 import { ComunicaSparqlEngine } from "#/tools/execute-sparql/sparql-engines/comunica/comunica-sparql-engine.ts";
-import { SparqljsSparqlValidator } from "#/tools/validate-sparql/validators/sparqljs/sparqljs-sparql-validator.ts";
-import { createValidateSparqlTool } from "#/tools/validate-sparql/tool.ts";
-import { createGenerateAndExecuteSparqlTool } from "#/tools/generate-and-execute-sparql/tool.ts";
-import type { GenerateSparqlOptions } from "#/tools/generate-sparql/generate-sparql.ts";
-import { createGenerateSparqlTool } from "#/tools/generate-sparql/tool.ts";
-import { createExecuteSparqlTool } from "#/tools/execute-sparql/tool.ts";
-import { createGenerateIriTool } from "#/tools/generate-iri/tool.ts";
-import { createSearchFactsTool } from "#/tools/search-facts/tool.ts";
 import { createFilePersistedStore } from "#/n3store/persist/file.ts";
-import { createFilePersistedOrama } from "#/orama/persist/file.ts";
+import { createFilePersistedOrama } from "#/tools/search-facts/search-engines/orama/persist.ts";
 import systemPrompt from "./prompt.md" with { type: "text" };
+import { createSparqlTools } from "#/tools/sparql-tools.ts";
 
 if (import.meta.main) {
   const { tools, persistN3Store, persistOrama } = await setup();
@@ -44,9 +37,7 @@ if (import.meta.main) {
       model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages,
-      tools: {
-        generateAndExecuteSparql: tools.generateAndExecuteSparql,
-      },
+      tools,
       stopWhen: stepCountIs(100),
     });
 
@@ -67,8 +58,6 @@ async function setup() {
   const iriPrefix = "https://fartlabs.org/.well-known/genid/";
   const iriGenerator = new UlidIriGenerator(iriPrefix);
 
-  const sparqlValidator = new SparqljsSparqlValidator();
-
   const { n3Store, persist: persistN3Store } = await createFilePersistedStore(
     "./store.ttl",
   );
@@ -83,37 +72,18 @@ async function setup() {
   }
 
   const interceptor = syncOrama(orama, n3Store);
+
   const comunicaQueryEngine = new QueryEngine();
   const sparqlEngine = new ComunicaSparqlEngine({
     queryEngine: comunicaQueryEngine,
     context: { sources: [interceptor] },
   });
 
-  const generateSparqlOptions: GenerateSparqlOptions = {
-    model: google("gemini-2.5-flash"),
-    tools: {
-      iriGenerator,
-      sparqlValidator,
-      searchEngine,
-      sparqlEngine,
-    },
-    context: {
-      userIri: "https://id.etok.me/",
-      assistantIri: "https://id.etok.me/agent",
-      formatDate: () => new Date().toISOString(),
-    },
-  };
-
-  const tools = {
-    generateIri: createGenerateIriTool(iriGenerator),
-    sparqlValidator: createValidateSparqlTool(sparqlValidator),
-    searchFacts: createSearchFactsTool(searchEngine),
-    executeSparql: createExecuteSparqlTool(sparqlEngine),
-    generateSparql: createGenerateSparqlTool(generateSparqlOptions),
-    generateAndExecuteSparql: createGenerateAndExecuteSparqlTool(
-      generateSparqlOptions,
-    ),
-  };
+  const tools = createSparqlTools({
+    sparqlEngine,
+    searchEngine,
+    iriGenerator,
+  });
 
   return {
     tools,
