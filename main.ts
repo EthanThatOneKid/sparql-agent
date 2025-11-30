@@ -1,13 +1,14 @@
 import type { ModelMessage } from "ai";
 import { generateText, stepCountIs } from "ai";
 import { google } from "@ai-sdk/google";
-import { setup } from "./config.ts";
+import { formatSparqlPrompt } from "./src/tools/sparql-tools.ts";
 import systemPrompt from "./prompt.md" with { type: "text" };
+import { setup } from "./config.ts";
 
 if (import.meta.main) {
   const { tools, persist } = await setup();
-
   const messages: ModelMessage[] = [];
+
   while (true) {
     const promptText = prompt(">");
     if (!promptText) {
@@ -20,7 +21,11 @@ if (import.meta.main) {
 
     messages.push({
       role: "user",
-      content: promptText,
+      content: formatSparqlPrompt(promptText, {
+        userIri: "https://id.etok.me/",
+        assistantIri: "https://id.etok.me/assistant",
+        formatDate: () => new Date().toISOString(),
+      }),
     });
 
     const result = await generateText({
@@ -31,15 +36,22 @@ if (import.meta.main) {
       stopWhen: stepCountIs(100),
     });
 
-    messages.push({
-      role: "assistant",
-      content: result.text,
+    messages.push({ role: "assistant", content: result.text });
+
+    // Log tool call traces.
+    result.steps.forEach((step) => {
+      step.toolResults.forEach((toolResult) => {
+        console.log(`🛠️ ${toolResult.toolName}`, {
+          input: toolResult.input,
+          output: toolResult.output,
+        });
+      });
     });
 
-    console.dir(result, { depth: null });
+    // Log the final response.
     console.log(result.text);
 
-    // Persist stores after each assistant response.
+    // Persist the knowledge base.
     await persist();
   }
 }

@@ -33,7 +33,7 @@ export const executeSparqlOutputSchema = z.object({
     z.array(sparqlBindingsSchema),
     z.array(quadSchema),
   ]).describe(
-    "The result of executing the SPARQL query (string for DESCRIBE, boolean for ASK, array of bindings for SELECT, array of quads for CONSTRUCT)",
+    "The query result: string for DESCRIBE queries, boolean for ASK queries, array of variable bindings for SELECT queries (each binding is an object with variable names as keys and RDF terms as values), or array of RDF quads for CONSTRUCT queries.",
   ),
 });
 
@@ -43,5 +43,7 @@ export const executeSparqlOutputSchema = z.object({
 export type ExecuteSparqlInput = z.infer<typeof executeSparqlInputSchema>;
 
 export const executeSparqlInputSchema = z.object({
-  query: z.string().describe("The SPARQL query to execute."),
+  query: z.string().describe(
+    "A complete SPARQL query string. Supports SELECT, ASK, CONSTRUCT, DESCRIBE (read-only), and INSERT, UPDATE, DELETE (modification). Use standard vocabularies (Schema.org, FOAF, RDF, etc.) and include PREFIX declarations for any vocabularies used.",
+  ),
 });

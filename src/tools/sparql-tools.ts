@@ -13,8 +13,41 @@ export interface SparqlOptions {
 
 export function createSparqlTools(options: SparqlOptions) {
   return {
-    sparqlEngine: createExecuteSparqlTool(options.sparqlEngine),
-    searchEngine: createSearchFactsTool(options.searchEngine),
-    iriGenerator: createGenerateIriTool(options.iriGenerator),
+    executeSparql: createExecuteSparqlTool(options.sparqlEngine),
+    searchFacts: createSearchFactsTool(options.searchEngine),
+    generateIri: createGenerateIriTool(options.iriGenerator),
   };
+}
+
+export interface SparqlPromptContext {
+  userIri: string;
+  assistantIri: string;
+  formatDate: () => string;
+}
+
+export function formatSparqlPrompt(
+  prompt: string,
+  context?: SparqlPromptContext,
+) {
+  const parts: string[] = [];
+  if (context?.userIri) {
+    parts.push(
+      `The user's IRI is <${context.userIri}>. When the prompt references the user (explicitly or implicitly through first-person pronouns such as "me", "I", "we", etc.), use this IRI to represent the user in the generated SPARQL query.`,
+    );
+  }
+
+  if (context?.assistantIri) {
+    parts.push(
+      `The assistant's IRI is <${context.assistantIri}>. When the prompt references the assistant (explicitly or implicitly through second-person pronouns such as "you", "your", "yours", etc.), use this IRI to represent the assistant in the generated SPARQL query.`,
+    );
+  }
+
+  if (context?.formatDate) {
+    parts.push(
+      `The time of writing the SPARQL query is ${context.formatDate()}.`,
+    );
+  }
+
+  parts.push(`Generate a SPARQL query for the following prompt:\n\n${prompt}`);
+  return parts.join(" ");
 }
