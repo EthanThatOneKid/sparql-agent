@@ -52,6 +52,11 @@ if (import.meta.main) {
     console.log(result.text);
 
     // Persist the knowledge base.
-    await persist();
+    await persist().catch((error) => {
+      console.error(
+        "Continuing without persisting the knowledge base:",
+        error,
+      );
+    });
   }
 }
