@@ -7,7 +7,8 @@ export async function createFilePersistedStore(filePath: string) {
 
   try {
     const data = await Deno.readTextFile(filePath);
-    decodeTurtle(data);
+    const loadedStore = decodeTurtle(data);
+    n3Store.addQuads(loadedStore.getQuads(null, null, null, null));
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       console.log(`No existing ${filePath} found, starting with fresh data`);

@@ -14,6 +14,8 @@ import { createSparqlTools } from "#/tools/sparql-tools.ts";
 
 export async function setup() {
   const { store, orama, persist } = await setupStores();
+  await persist();
+
   const { sparqlEngine } = setupSparqlEngine(store);
   const { searchEngine } = setupSearchEngine(orama);
   const { iriGenerator } = setupIriGenerator();
@@ -58,6 +60,7 @@ async function setupStores() {
 
   // Only insert quads if Orama was empty or file didn't exist.
   if (wasCreated) {
+    console.log("Inserting quads into Orama...");
     await insertStoreIntoOrama(orama, n3Store);
   }
 
