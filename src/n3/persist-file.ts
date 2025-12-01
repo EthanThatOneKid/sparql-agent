@@ -1,12 +1,13 @@
 import { Store } from "n3";
-import { exportTurtle, insertTurtle } from "../turtle.ts";
+import { encodeTurtle } from "#/n3/encoding/encode-turtle.ts";
+import { decodeTurtle } from "#/n3/encoding/decode-turtle.ts";
 
 export async function createFilePersistedStore(filePath: string) {
   const n3Store = new Store();
 
   try {
     const data = await Deno.readTextFile(filePath);
-    insertTurtle(n3Store, data);
+    decodeTurtle(data);
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       console.log(`No existing ${filePath} found, starting with fresh data`);
@@ -18,7 +19,7 @@ export async function createFilePersistedStore(filePath: string) {
   return {
     n3Store,
     persist: async () => {
-      const data = await exportTurtle(n3Store);
+      const data = await encodeTurtle(n3Store);
       await Deno.writeTextFile(filePath, data);
     },
   };
