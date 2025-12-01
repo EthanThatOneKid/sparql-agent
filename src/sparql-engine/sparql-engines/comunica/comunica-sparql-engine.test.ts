@@ -2,7 +2,7 @@ import { assert, assertEquals } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import type { Quad } from "@rdfjs/types";
-import type { SparqlBindings } from "#/tools/execute-sparql/sparql-engine.ts";
+import type { SparqlBindings } from "#/sparql-engine/sparql-engine.ts";
 import { ComunicaSparqlEngine } from "./comunica-sparql-engine.ts";
 
 function createPopulatedN3Store(): Store {

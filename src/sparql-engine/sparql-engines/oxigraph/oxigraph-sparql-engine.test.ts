@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { Store } from "oxigraph";
-import type { SparqlBindings } from "#/tools/execute-sparql/sparql-engine.ts";
+import type { SparqlBindings } from "#/sparql-engine/sparql-engine.ts";
 import { OxigraphSparqlEngine } from "./oxigraph-sparql-engine.ts";
 
 function createPopulatedOxigraphStore(): Store {

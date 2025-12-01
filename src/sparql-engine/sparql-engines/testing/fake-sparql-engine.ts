@@ -1,7 +1,7 @@
 import type {
   ExecuteSparqlOutput,
   SparqlEngine,
-} from "#/tools/execute-sparql/sparql-engine.ts";
+} from "#/sparql-engine/sparql-engine.ts";
 
 export class FakeSparqlEngine implements SparqlEngine {
   public constructor(private readonly fakeResult: ExecuteSparqlOutput) {}

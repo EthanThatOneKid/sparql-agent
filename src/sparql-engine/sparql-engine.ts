@@ -33,17 +33,24 @@ export const executeSparqlOutputSchema = z.object({
     z.array(sparqlBindingsSchema),
     z.array(quadSchema),
   ]).describe(
-    "The query result: string for DESCRIBE queries, boolean for ASK queries, array of variable bindings for SELECT queries (each binding is an object with variable names as keys and RDF terms as values), or array of RDF quads for CONSTRUCT queries.",
+    "The query result: string for DESCRIBE queries, boolean for ASK queries, array of variable bindings for SELECT queries, or array of RDF quads for CONSTRUCT queries.",
   ),
 });
 
 /**
- * ExecuteSparqlInput represents a SPARQL query input.
+ * ReadSparqlInput represents a read-only SPARQL query input.
  */
-export type ExecuteSparqlInput = z.infer<typeof executeSparqlInputSchema>;
-
-export const executeSparqlInputSchema = z.object({
+export const readSparqlInputSchema = z.object({
   query: z.string().describe(
-    "A complete SPARQL query string. Supports SELECT, ASK, CONSTRUCT, DESCRIBE (read-only), and INSERT, UPDATE, DELETE (modification). Use standard vocabularies (Schema.org, FOAF, RDF, etc.) and include PREFIX declarations for any vocabularies used.",
+    "A read-only SPARQL query (SELECT, ASK, CONSTRUCT, DESCRIBE). Use this to research the graph structure, find existing entities, or check properties. DO NOT use INSERT/DELETE here.",
+  ),
+});
+
+/**
+ * ModifySparqlInput represents a modification SPARQL query input.
+ */
+export const modifySparqlInputSchema = z.object({
+  query: z.string().describe(
+    "A modification SPARQL query (INSERT, DELETE, LOAD, CLEAR). Use this to persist new facts or update existing ones. Ensure you have validated the schema and prefixes before executing.",
   ),
 });

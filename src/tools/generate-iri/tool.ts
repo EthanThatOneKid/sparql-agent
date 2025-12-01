@@ -1,23 +1,36 @@
 import { tool } from "ai";
+import { z } from "zod/v4";
 import type { IriGenerator } from "./iri-generator.ts";
-import {
-  generateIriInputSchema,
-  generateIriOutputSchema,
-} from "./iri-generator.ts";
 
 /**
- * createGenerateIriTool creates a tool that generates a unique IRI for an entity.
+ * createGenerateIriTool creates a tool that generates a unique IRI
+ * (Internationalized Resource Identifier) for a new entity.
  */
 export function createGenerateIriTool(iriGenerator: IriGenerator) {
   return tool({
-    name: "generateIri",
+    name: "generate_iri",
     description:
-      `Generate a unique IRI (Internationalized Resource Identifier) for a new entity that doesn't exist in the knowledge base. Use this tool AFTER searching with searchFacts confirms the entity doesn't exist. The generated IRI is guaranteed to be unique and can be used immediately in SPARQL INSERT queries to create new entities.`,
-    inputSchema: generateIriInputSchema,
-    outputSchema: generateIriOutputSchema,
+      "Generate a unique IRI (Internationalized Resource Identifier) for a new entity. Use this when you need to insert a new node into the graph.",
+    inputSchema: z.object({
+      name: z.string().optional().describe(
+        "A human-readable name or label for the entity (for logging/debugging).",
+      ),
+      entityType: z.enum([
+        "Person",
+        "Organization",
+        "Place",
+        "Event",
+        "Concept",
+        "Other",
+      ]).optional().describe(
+        "The type of entity being created. Helps document intent.",
+      ),
+    }),
+    outputSchema: z.object({
+      iri: z.string().describe("The generated unique IRI."),
+    }),
     execute: () => {
-      const iri = iriGenerator.generateIri();
-      return { iri };
+      return { iri: iriGenerator.generateIri() };
     },
   });
 }

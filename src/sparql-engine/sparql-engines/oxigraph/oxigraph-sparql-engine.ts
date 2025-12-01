@@ -4,7 +4,7 @@ import type {
   ExecuteSparqlOutput,
   SparqlBindings,
   SparqlEngine,
-} from "#/tools/execute-sparql/sparql-engine.ts";
+} from "#/sparql-engine/sparql-engine.ts";
 
 export type OxigraphQueryOptions = Parameters<Store["query"]>[1];
 

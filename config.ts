@@ -7,7 +7,7 @@ import {
   insertStoreIntoOrama,
   syncOrama,
 } from "#/tools/search-facts/search-engines/orama/sync-orama.ts";
-import { ComunicaSparqlEngine } from "#/tools/execute-sparql/sparql-engines/comunica/comunica-sparql-engine.ts";
+import { ComunicaSparqlEngine } from "#/sparql-engine/sparql-engines/comunica/comunica-sparql-engine.ts";
 import { createFilePersistedStore } from "#/n3/persist-file.ts";
 import { createFilePersistedOrama } from "#/tools/search-facts/search-engines/orama/persist.ts";
 import { createSparqlTools } from "#/tools/sparql-tools.ts";
