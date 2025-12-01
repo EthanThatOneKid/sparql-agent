@@ -1,0 +1,180 @@
+> deno task start
+Task start deno -A --env --unstable-raw-imports main.ts
+> Watching Star Trek with my Dad today.
+🛠️ search_facts { input: { query: "Dad" }, output: [] }
+🛠️ search_facts { input: { query: "Star Trek" }, output: [] }
+🛠️ generate_iri {
+  input: { name: "Dad", entityType: "Person" },
+  output: {
+    iri: "https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV"
+  }
+}
+🛠️ generate_iri {
+  input: { name: "Star Trek", entityType: "Other" },
+  output: {
+    iri: "https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3"
+  }
+}
+🛠️ generate_iri {
+  input: { name: "Watching Star Trek with my Dad", entityType: "Event" },
+  output: {
+    iri: "https://fartlabs.org/.well-known/genid/01KBDM8N0VJE07EZKXB8NJZZKV"
+  }
+}
+🛠️ update_sparql {
+  input: {
+    query: "PREFIX schema: <https://schema.org/>\n" +
+      "PREFIX ical: <http://www.w3.org/2002/12/cal/ical#>\n" +
+      "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n" +
+      "\n" +
+      "INSERT DATA {\n" +
+      "  <https://id.etok.me/> a schema:Person ;\n" +
+      "    foaf:knows <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> .\n" +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> a schema:Person ;\n" +
+      '    schema:name "Dad" .\n' +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> a schema:CreativeWork ;\n" +
+      '    schema:name "Star Trek" .\n' +
+      "  <https://id.etok.me/> a schema:Person ;\n" +
+      "    foaf:knows <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> .\n" +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> a schema:Person ;\n" +
+      '    schema:name "Dad" .\n' +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> a schema:CreativeWork ;\n" +
+      '    schema:name "Star Trek" .\n' +
+      "    foaf:knows <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> .\n" +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> a schema:Person ;\n" +
+      '    schema:name "Dad" .\n' +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> a schema:CreativeWork ;\n" +
+      '    schema:name "Star Trek" .\n' +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> a schema:Person ;\n" +
+      '    schema:name "Dad" .\n' +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> a schema:CreativeWork ;\n" +
+      '    schema:name "Star Trek" .\n' +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> a schema:CreativeWork ;\n" +
+      '    schema:name "Star Trek" .\n' +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> a schema:CreativeWork ;\n" +
+      '    schema:name "Star Trek" .\n' +
+      '    schema:name "Star Trek" .\n' +
+      "\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8N0VJE07EZKXB8NJZZKV> a ical:Vevent ;\n" +
+      '    ical:summary "Watching Star Trek with my Dad" ;\n' +
+      '    ical:dtstart "2025-12-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> ;\n' +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8N0VJE07EZKXB8NJZZKV> a ical:Vevent ;\n" +
+      '    ical:summary "Watching Star Trek with my Dad" ;\n' +
+      '    ical:dtstart "2025-12-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> ;\n' +
+      "    schema:performer <https://id.etok.me/>, <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> ;\n" +   
+      "    schema:about <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> .\n" +
+      "}"
+  },
+  output: { result: "" }
+}
+The event "Watching Star Trek with my Dad" for today (2025-12-01) has been added to your knowledge base. Your Dad has been added      '    ical:dtstart "2025-12-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> ;\n' +
+      "    schema:performer <https://id.etok.me/>, <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> ;\n" +   
+      "    schema:about <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> .\n" +
+      "    schema:performer <https://id.etok.me/>, <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> ;\n" +   
+      "    schema:performer <https://id.etok.me/>, <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> ;\n" +   
+      "    schema:about <https://fartlabs.org/.well-known/genid/01KBDM8KYWFJ50B20VDFZVQ0T3> .\n" +
+      "}"
+  },
+  output: { result: "" }
+}
+The event "Watching Star Trek with my Dad" for today (2025-12-01) has been added to your knowledge base. Your Dad has been added as a person and Star Trek as a creative work.
+> My dad's name is Albert.
+🛠️ search_facts {
+  input: { query: "my Dad" },
+  output: [
+    {
+      id: "https://orama.fartlabs.org/.well-known/genid/PGh0dHBzOi8vZmFydGxhYnMub3JnLy53ZWxsLWtub3duL2dlbmlkLzAxS0JETThKWFlOVFgwU0FCN01XU0ozQ1NWPiA8aHR0cHM6Ly9zY2hlbWEub3JnL25hbWU-ICJEYWQiIC4K",
+      subject: "https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV",
+      predicate: "https://schema.org/name",
+      object: "Dad",
+      score: 3.1805280543736756
+    },
+    {
+      id: "https://orama.fartlabs.org/.well-known/genid/PGh0dHBzOi8vZmFydGxhYnMub3JnLy53ZWxsLWtub3duL2dlbmlkLzAxS0JETThOMFZKRTA3RVpLWEI4TkpaWktWPiA8aHR0cDovL3d3dy53My5vcmcvMjAwMi8xMi9jYWwvaWNhbCNzdW1tYXJ5PiAiV2F0Y2hpbmcgU3RhciBUcmVrIHdpdGggbXkgRGFkIiAuCg",
+      subject: "https://fartlabs.org/.well-known/genid/01KBDM8N0VJE07EZKXB8NJZZKV",
+      predicate: "http://www.w3.org/2002/12/cal/ical#summary",
+      object: "Watching Star Trek with my Dad",
+      score: 1.9790667453402326
+    }
+  ]
+}
+🛠️ update_sparql {
+  input: {
+    query: "\n" +
+      "PREFIX schema: <https://schema.org/>\n" +
+      "\n" +
+      "INSERT DATA {\n" +
+      '  <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> schema:name "Albert" .\n' +
+      "}\n"
+  },
+  output: { result: "" }
+}
+I've updated your dad's name to Albert in your knowledge base.
+> What is my dad's name.
+🛠️ search_facts {
+  input: { query: "my Dad" },
+  output: [
+    {
+      id: "https://orama.fartlabs.org/.well-known/genid/PGh0dHBzOi8vZmFydGxhYnMub3JnLy53ZWxsLWtub3duL2dlbmlkLzAxS0JETThKWFlOVFgwU0FCN01XU0ozQ1NWPiA8aHR0cHM6Ly9zY2hlbWEub3JnL25hbWU-ICJEYWQiIC4K",
+      subject: "https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV",
+      predicate: "https://schema.org/name",
+      object: "Dad",
+      score: 3.269924243996143
+    },
+    {
+      id: "https://orama.fartlabs.org/.well-known/genid/PGh0dHBzOi8vZmFydGxhYnMub3JnLy53ZWxsLWtub3duL2dlbmlkLzAxS0JETThOMFZKRTA3RVpLWEI4TkpaWktWPiA8aHR0cDovL3d3dy53My5vcmcvMjAwMi8xMi9jYWwvaWNhbCNzdW1tYXJ5PiAiV2F0Y2hpbmcgU3RhciBUcmVrIHdpdGggbXkgRGFkIiAuCg",
+      subject: "https://fartlabs.org/.well-known/genid/01KBDM8N0VJE07EZKXB8NJZZKV",
+      predicate: "http://www.w3.org/2002/12/cal/ical#summary",
+      object: "Watching Star Trek with my Dad",
+      score: 1.964503324978977
+    }
+  ]
+}
+🛠️ query_sparql {
+  input: {
+    query: "\n" +
+      "PREFIX schema: <https://schema.org/>\n" +
+      "\n" +
+      "SELECT ?dadName\n" +
+      "WHERE {\n" +
+      "  <https://fartlabs.org/.well-known/genid/01KBDM8JXYNTX0SAB7MWSJ3CSV> schema:name ?dadName .\n" +
+      "}\n"
+  },
+  output: {
+    result: [
+      { dadName: Literal { id: '"Dad"' } },
+      { dadName: Literal { id: '"Albert"' } }
+    ]
+  }
+}
+Your dad's name is Albert.
+> What did I do today?
+🛠️ query_sparql {
+  input: {
+    query: "\n" +
+      "PREFIX ical: <http://www.w3.org/2002/12/cal/ical#>\n" +
+      "PREFIX schema: <https://schema.org/>\n" +
+      "\n" +
+      "SELECT ?eventName\n" +
+      "WHERE {\n" +
+      "    ?event a ical:Vevent ;\n" +
+      '           ical:dtstart "2025-12-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> ;\n' +
+      "           schema:performer <https://id.etok.me/> ;\n" +
+      "           ical:summary ?eventName .\n" +
+      "}\n"
+  },
+  output: {
+    result: [
+      { eventName: Literal { id: '"Watching Star Trek with my Dad"' } }
+    ]
+  }
+}
+Today you watched Star Trek with your Dad.
