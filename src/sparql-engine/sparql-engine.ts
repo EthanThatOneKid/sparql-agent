@@ -37,19 +37,13 @@ export const executeSparqlOutputSchema = z.object({
   ),
 });
 
-/**
- * ReadSparqlInput represents a read-only SPARQL query input.
- */
-export const readSparqlInputSchema = z.object({
+export const querySparqlInputSchema = z.object({
   query: z.string().describe(
     "A read-only SPARQL query (SELECT, ASK, CONSTRUCT, DESCRIBE). Use this to research the graph structure, find existing entities, or check properties. DO NOT use INSERT/DELETE here.",
   ),
 });
 
-/**
- * ModifySparqlInput represents a modification SPARQL query input.
- */
-export const modifySparqlInputSchema = z.object({
+export const updateSparqlInputSchema = z.object({
   query: z.string().describe(
     "A modification SPARQL query (INSERT, DELETE, LOAD, CLEAR). Use this to persist new facts or update existing ones. Ensure you have validated the schema and prefixes before executing.",
   ),

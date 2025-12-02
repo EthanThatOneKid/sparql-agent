@@ -12,8 +12,8 @@ export function createGenerateIriTool(iriGenerator: IriGenerator) {
     description:
       "Generate a unique IRI (Internationalized Resource Identifier) for a new entity. Use this when you need to insert a new node into the graph.",
     inputSchema: z.object({
-      name: z.string().optional().describe(
-        "A human-readable name or label for the entity (for logging/debugging).",
+      entityName: z.string().optional().describe(
+        "A human-readable name or label for the entity. Helps associate the IRI with the mentioned entity.",
       ),
       entityType: z.enum([
         "Person",

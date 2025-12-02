@@ -2,7 +2,7 @@ import { tool } from "ai";
 import type { SparqlEngine } from "#/sparql-engine/sparql-engine.ts";
 import {
   executeSparqlOutputSchema,
-  readSparqlInputSchema,
+  querySparqlInputSchema,
 } from "#/sparql-engine/sparql-engine.ts";
 
 /**
@@ -17,7 +17,7 @@ Use this tool to:
 - Find existing entities before creating new ones
 - Verify if facts already exist
 - Supports: SELECT, ASK, CONSTRUCT, DESCRIBE`,
-    inputSchema: readSparqlInputSchema,
+    inputSchema: querySparqlInputSchema,
     outputSchema: executeSparqlOutputSchema,
     execute: async ({ query }) => {
       // In a more advanced implementation, you could enforce read-only logic here

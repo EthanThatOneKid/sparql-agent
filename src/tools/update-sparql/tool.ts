@@ -2,7 +2,7 @@ import { tool } from "ai";
 import type { SparqlEngine } from "#/sparql-engine/sparql-engine.ts";
 import {
   executeSparqlOutputSchema,
-  modifySparqlInputSchema,
+  updateSparqlInputSchema,
 } from "#/sparql-engine/sparql-engine.ts";
 
 /**
@@ -18,7 +18,7 @@ Use this tool to:
 - Delete obsolete facts (DELETE DATA, DELETE {})
 - Update information
 - Supports: INSERT, DELETE, LOAD, CLEAR`,
-    inputSchema: modifySparqlInputSchema,
+    inputSchema: updateSparqlInputSchema,
     outputSchema: executeSparqlOutputSchema,
     execute: async ({ query }) => {
       return await sparqlEngine.executeSparql(query);
